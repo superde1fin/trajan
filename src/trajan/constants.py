@@ -7,3 +7,17 @@ MAX_VERBOSITY = 3
 
 DEFAULT_OUTFILE = "trajan.csv"
 DEFAULT_HIST_BINCOUNT = 1000
+
+DEFAULT_UNITS = "metal"
+
+AVAILABLE_UNITS = ["real", "metal"]
+
+#To grams
+MASS_CONVERSIONS = {"real" : 1.660539056e-24,
+                    "metal" : 1.660539056e-24,
+}
+
+#To cm
+DISTANCE_CONVERSIONS = {"real": 1e-8,
+                        "metal": 1e-8,
+}

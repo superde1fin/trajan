@@ -87,6 +87,11 @@ class BASE():
                     atom_ctr = float("inf")
                     self.Nframes += 1
 
+        all_data.append(atom_data)
+        all_boxes.append(box)
+        all_maxtypes.append(max_type)
+        self.Nframes += 1
+
         for i, column_heading in enumerate(column_headers):
             self.columns[column_heading] = i
 

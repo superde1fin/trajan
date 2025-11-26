@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 import argparse
 
-from .handlers import ANGLE, QUNIT
+from .handlers import ANGLE, QUNIT, DENSITY
 
 from . import constants
 from . import utils
@@ -39,6 +39,12 @@ def parse_args():
     qunit.add_argument("-c", "--cutoffs", nargs = "+", type = float, default = [], help = "Maximum distances between each former and connector (in Angstroms) for them to be considered bonded. Default: inf. Example: 1.1 1.2 1.3 1.4. If types supplied are (1 2 0 3 4) then C(1, 3) = 1.1, C(1, 4) = 1.2, C(2, 3) = 1.3, and C(2, 4) = 1.4.")
 
     qunit.set_defaults(handler_class = QUNIT)
+
+
+    density = subparsers.add_parser("density", help = "Argument parser for density calculation from LAMMPS-generated trajectory files.")
+    density.add_argument("elements", nargs = "+", type = str, default = [], help = "Space separated list of element names for each type present in the trajectory file. In case a custom mass has been used a numerical value can be specified. Example: Si 15.799 Na 0.2")
+    density.add_argument("-u", "--units", type = str, default = constants.DEFAULT_UNITS, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.")
+    density.set_defaults(handler_class = DENSITY)
 
     return parser.parse_args()
 

@@ -25,10 +25,12 @@ class DENSITY(BASE):
         self.parse_file()
 
         num_masses = len(self.masses)
-        max_ntype = np.max(self.ntypes)
-        if num_masses != max_ntype:
-            print(f"ERROR: Incorrect number of masses given ({num_masses}) while at least one of the timesteps has ({max_ntype}) types.")
+        ntypes = len(self.types)
+        if num_masses < ntypes:
+            print(f"ERROR: Not enough masses given ({num_masses}) for all types ({" ".join(self.types.astype(str))}) present.")
             sys.exit(1)
+        elif num_masses > ntypes:
+            print(f"WARNING: Too many masses given ({num_masses}) for all types ({" ".join(self.types.astype(str))}) present.")
 
         self.masses = np.concatenate(([0], self.masses))
 

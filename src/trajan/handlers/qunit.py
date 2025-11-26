@@ -28,13 +28,19 @@ class QUNIT(BASE):
 
         self.parse_file()
 
-        max_type = np.max(self.ntypes)
+        max_type = np.max(self.types)
         self.interaction_matrix = np.full((max_type + 1, max_type + 1), np.inf)
 
         if args.cutoffs:
             cutoff_iter = iter(args.cutoffs)
             for f in self.formers:
+                if not f in self.types:
+                    print(f"ERROR: Incorrect former type ({f}). Types present in trajectories: {" ".join(self.types.astype(str))}.")
+                    sys.exit(1)
                 for c in self.connectors:
+                    if not c in self.types:
+                        print(f"ERROR: Incorrect connector type ({c}). Types present in trajectories: {" ".join(self.types.astype(str))}.")
+                        sys.exit(1)
                     cut = next(cutoff_iter)
                     self.interaction_matrix[f, c] = cut
                     self.interaction_matrix[c, f] = cut

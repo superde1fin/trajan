@@ -14,7 +14,7 @@ class BASE():
         self.box_periods = None
         self.atom_counts = None
         self.timesteps = None
-        self.ntypes = None
+        self.types = None
 
         #Per-snapshot 2D arrays
         self.atomic_data = None
@@ -32,7 +32,6 @@ class BASE():
         all_timesteps = list()
         atom_counts = list()
         atomic_counts = list()
-        all_maxtypes = list()
         box_period = list()
         column_headers = list()
         box_ctr = float("inf")
@@ -75,21 +74,16 @@ class BASE():
                     atom_data = list()
                     column_headers = line.split()[2:]
                 elif atom_ctr < natoms:
-                    data_line = np.fromstring(line, sep = " ")
-                    atom_data.append(data_line)
-                    if data_line[column_headers.index("type")] > max_type:
-                        max_type = data_line[column_headers.index("type")]
+                    atom_data.append(np.fromstring(line, sep = " "))
                     atom_ctr += 1
                 elif atom_ctr == natoms:
                     all_data.append(atom_data)
                     all_boxes.append(box)
-                    all_maxtypes.append(max_type)
                     atom_ctr = float("inf")
                     self.Nframes += 1
 
         all_data.append(atom_data)
         all_boxes.append(box)
-        all_maxtypes.append(max_type)
         self.Nframes += 1
 
         for i, column_heading in enumerate(column_headers):
@@ -100,9 +94,11 @@ class BASE():
         self.atom_counts = np.array(atomic_counts)
         self.box_periods = np.array(box_period)
         self.timesteps = np.array(all_timesteps)
-        self.ntypes = np.array(all_maxtypes).astype(int)
 
         self.lengths = self.boxes[:, :, 1] - self.boxes[:, :, 0]
+
+        if "type" in self.columns:
+            self.types = np.sort(np.unique(self.atomic_data[..., self.columns["type"]]).astype(int))
 
         self.verbose_print(f"\nTrajectory file ({self.trajectory}) scan complete.\n")
 

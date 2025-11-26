@@ -1,6 +1,6 @@
 import numpy as np
+import scipy as sp
 import sys
-from scipy import spatial as scisp
 
 from trajan import constants
 
@@ -14,6 +14,7 @@ class BASE():
         self.box_periods = None
         self.atom_counts = None
         self.timesteps = None
+        self.ntypes = None
 
         #Per-snapshot 2D arrays
         self.atomic_data = None
@@ -31,7 +32,7 @@ class BASE():
         all_timesteps = list()
         atom_counts = list()
         atomic_counts = list()
-        atomic_counts = list()
+        all_maxtypes = list()
         box_period = list()
         column_headers = list()
         box_ctr = float("inf")
@@ -70,14 +71,19 @@ class BASE():
 
                 if "ITEM: ATOMS" in line:
                     atom_ctr = 0
+                    max_type = -np.inf
                     atom_data = list()
                     column_headers = line.split()[2:]
                 elif atom_ctr < natoms:
-                    atom_data.append(np.fromstring(line, sep = " "))
+                    data_line = np.fromstring(line, sep = " ")
+                    atom_data.append(data_line)
+                    if data_line[column_headers.index("type")] > max_type:
+                        max_type = data_line[column_headers.index("type")]
                     atom_ctr += 1
                 elif atom_ctr == natoms:
                     all_data.append(atom_data)
                     all_boxes.append(box)
+                    all_maxtypes.append(max_type)
                     atom_ctr = float("inf")
                     self.Nframes += 1
 
@@ -89,10 +95,11 @@ class BASE():
         self.atom_counts = np.array(atomic_counts)
         self.box_periods = np.array(box_period)
         self.timesteps = np.array(all_timesteps)
+        self.ntypes = np.array(all_maxtypes).astype(int)
 
         self.lengths = self.boxes[:, :, 1] - self.boxes[:, :, 0]
 
-        self.verbose_print(f"Trajectory file ({self.trajectory}) scan complete.")
+        self.verbose_print(f"\nTrajectory file ({self.trajectory}) scan complete.\n")
 
     def verbose_print(self, *args, verbosity = None):
         if verbosity is None:
@@ -119,8 +126,31 @@ class BASE():
 
         return self.atomic_data[frame][self.atomic_data[frame][:, self.columns["type"]] == type]
 
+    def filter_type(self, type, frame):
+        if frame < 0 or frame >= self.Nframes:
+            raise RuntimeError(f"INTERNAL ERROR (BASE.filter_type): Frame out of bounds. Number of frames: {self.Nframes}. Requested frame: {frame}")
+
+        return self.atomic_data[frame][self.atomic_data[frame][:, self.columns["type"]] != type]
+
+    def select_types(self, types, frame):
+        if frame < 0 or frame >= self.Nframes:
+            raise RuntimeError(f"INTERNAL ERROR (BASE.select_types): Frame out of bounds. Number of frames: {self.Nframes}. Requested frame: {frame}")
+
+        type_column = self.atomic_data[frame][:, self.columns["type"]]
+
+        return self.atomic_data[frame][np.isin(type_column, types)]
+
+    def filter_types(self, types, frame):
+        if frame < 0 or frame >= self.Nframes:
+            raise RuntimeError(f"INTERNAL ERROR (BASE.filter_types): Frame out of bounds. Number of frames: {self.Nframes}. Requested frame: {frame}")
+
+        type_column = self.atomic_data[frame][:, self.columns["type"]]
+
+        return self.atomic_data[frame][~np.isin(type_column, types)]
+
+
     def get_nclosest(self, central, neighs, N, box):
-        kdtree = scisp.cKDTree(neighs, boxsize = box)
+        kdtree = sp.spatial.cKDTree(neighs, boxsize = box)
         norms, idx = kdtree.query(central, k = N)
 
         return norms, idx

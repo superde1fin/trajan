@@ -8,6 +8,8 @@ class QUNIT(BASE):
 
         self.qunits = None
         self.outfile = args.outfile
+        if self.outfile == constants.DEFAULT_OUTFILE:
+            self.outfile += "qunit_"
 
         if 0 in args.types:
             zero_index = args.types.index(0)

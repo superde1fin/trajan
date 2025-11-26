@@ -8,6 +8,8 @@ class ANGLE(BASE):
 
         self.types = args.types
         self.outfile = args.outfile
+        if self.outfile == constants.DEFAULT_OUTFILE:
+            self.outfile += "angle_"
         self.bincount = args.bincount
 
         self.parse_file()

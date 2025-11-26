@@ -16,6 +16,9 @@ class DENSITY(BASE):
 
 
         self.outfile = args.outfile
+        if self.outfile == constants.DEFAULT_OUTFILE:
+            self.outfile += "density_"
+
         if args.units in constants.AVAILABLE_UNITS:
             self.units = args.units
         else:

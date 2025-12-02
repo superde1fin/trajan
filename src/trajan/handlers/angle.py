@@ -15,6 +15,7 @@ class ANGLE(BASE):
         self.bincount = args.bincount
 
         numcuts = len(args.cutoffs)
+        self.cutoffs = [np.inf, np.inf]
         if numcuts:
             if numcuts >= 2:
                 if numcuts == 2:
@@ -25,9 +26,8 @@ class ANGLE(BASE):
                     print("COMMENT: Only one cutoff specified but non-central bonded types are the same. Will use one cutoff for both.")
 
                 elif self.types[0] != self.types[2]:
-                    print("WARNING: Only one cutoff specified and non-central bonded types are NOT the same. Will use one cutoff for both.")
+                    print(f"WARNING: Only one cutoff specified and non-central bonded types are NOT the same. Will only set one cutoff: C({self.types[0]}, {self.types[1]}) = {args.cutoffs[0]}.")
                 self.cutoffs = [args.cutoffs[0], args.cutoffs[0]]
-
 
         self.parse_file()
 

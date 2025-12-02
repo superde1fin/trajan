@@ -21,7 +21,7 @@ def parse_args():
 
     #parser.add_argument("-s", "--steps", help = "Pattern for specifying which steps to use", type = str)
 
-    subparsers = parser.add_subparsers(dest="command", required=True, metavar = "analyzer", action = utils.StrictSubParsersAction)
+    subparsers = parser.add_subparsers(dest="command", metavar = "analyzer", action = utils.StrictSubParsersAction)
 
     bond_angle = subparsers.add_parser("angle", help = "Argument parser for extracting bond angle distributions from LAMMPS-generated trajectory files.", formatter_class = utils.NoMetavarHelpFormatter)
 
@@ -41,10 +41,13 @@ def parse_args():
     qunit.set_defaults(handler_class = QUNIT)
 
 
-    density = subparsers.add_parser("density", help = "Argument parser for density calculation from LAMMPS-generated trajectory files.")
+    density = subparsers.add_parser("density", help = "Argument parser for density calculation from LAMMPS-generated trajectory files.", formatter_class = utils.NoMetavarHelpFormatter)
     density.add_argument("elements", nargs = "+", type = str, default = [], help = "Space separated list of element names for each type present in the trajectory file. In case a custom mass has been used a numerical value can be specified. Example: Si 15.799 Na 0.2")
     density.add_argument("-u", "--units", type = str, default = constants.DEFAULT_UNITS, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.")
     density.set_defaults(handler_class = DENSITY)
+
+    if args.command is None:
+        parser.error("the following arguments are required: analyzer")
 
     return parser.parse_args()
 

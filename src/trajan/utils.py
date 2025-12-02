@@ -3,6 +3,8 @@ import sys
 
 from . import constants
 
+_ = lambda s: s
+
 class SupportAction(argparse.Action):
     def __init__(self,
                  option_strings,

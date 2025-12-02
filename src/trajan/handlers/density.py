@@ -22,7 +22,8 @@ class DENSITY(BASE):
         if args.units in constants.AVAILABLE_UNITS:
             self.units = args.units
         else:
-            print(f"ERROR: Unit set \"{args.units}\" is not supported. Please choose out of available unit sets: \n\n{'\n'.join(constants.AVAILABLE_UNITS)}\n")
+            unitstr = '\n'.join(constants.AVAILABLE_UNITS)
+            print(f"ERROR: Unit set \"{args.units}\" is not supported. Please choose out of available unit sets: \n\n{unitstr}\n")
             sys.exit(1)
 
         self.parse_file()

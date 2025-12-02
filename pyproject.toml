@@ -4,7 +4,7 @@
 ###############################################################################
 
 [build-system]
-requires      = ["hatchling>=1.26"]
+requires      = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 ###############################################################################
@@ -22,9 +22,9 @@ license         = { text = "GPL-3.0-only" }
 #  Runtime dependencies
 ###############################################################################
 dependencies = [
-  "numpy>=1.19.5",
-  "scipy>=1.5.4",
-  "importlib-metadata<5.0; python_version < '3.8'",
+  "numpy>=1.21.6",
+  "scipy>=1.7.3",
+  "importlib-metadata<6.7.0; python_version < '3.8'",
 ]
 
 

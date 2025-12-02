@@ -4,9 +4,6 @@ import numpy as np
 import scipy as sp
 import scipy.integrate
 
-if not hasattr(sp.integrate, "simpson"):
-    sp.integrate.simpson = sp.integrate.simps
-
 class ANGLE(BASE):
     def __init__(self, args):
         super().__init__(args.file, args.verbose)

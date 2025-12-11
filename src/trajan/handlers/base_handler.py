@@ -71,7 +71,7 @@ class BASE():
 
         #Max timestep set for testing
         max_ts =  float("inf")
-        max_ts =  100
+        max_ts =  1
         with open(self.__trajectory, "r") as f:
             for line in f:
                 if self.__Nframes > max_ts:

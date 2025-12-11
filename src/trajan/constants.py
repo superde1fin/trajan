@@ -24,3 +24,10 @@ DISTANCE_CONVERSIONS = {"real": 1e-8,
 
 DEFAULT_RDF_CUTOFF = 10 #A
 DEFAULT_ATOM_BATCH = 1000
+
+#In fm
+NEUTRON_SCATTERING_LENGTHS = {"Si": 4.149,
+                              "O" : 5.803,
+                              "Na": 3.63,
+                              }
+FT_GRID_DENSITY = 1000

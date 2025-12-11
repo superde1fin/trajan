@@ -52,6 +52,8 @@ def parse_args():
     pair_distribution.add_argument("-p", "--pair", nargs = 2, type = int, action = "append", help = "Atomic type pairs for selecting specific partial distribution functions.\n Repeat for multiple pairs: -p 1 2 -p 3 4")
     pair_distribution.add_argument("-b", "--bincount", type = int, default = constants.DEFAULT_HIST_BINCOUNT, help = f"Number of bins for the radial distribution functions. Default: {constants.DEFAULT_HIST_BINCOUNT}.")
     pair_distribution.add_argument("-bs", "--batch-size", type = int, default = constants.DEFAULT_ATOM_BATCH, help = f"Number of atoms whose neighbors are analyzed at a time. Default: {constants.DEFAULT_ATOM_BATCH}.\n Helpful to avoid memory overload when analyzing large systems.")
+    pair_distribution.add_argument("-t", "--total", nargs = "+", default = [], help = "Calculate the total correlation function based on the atom type mappings or custom neutron scattering lengths.\n This flag should be followd by a space separated list of atomic names or scattering lengths for each type in ascending order. Note: This value is calculated per atom while some experimental papers normalize the result per formula unit of the material. This will require scaling the output.")
+    pair_distribution.add_argument("-br", "--broaden", type = float, help = "When this flag is the idealized total correlation function is broadened to match experimental results. The value of the maximum momentum transfer Q_max should be provided in inverse angstroms for broadening.")
     pair_distribution.set_defaults(handler_class = RDFS)
 
 

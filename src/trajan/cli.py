@@ -11,6 +11,12 @@ from . import utils
 
 
 def parse_args():
+    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf"}
+    DUMMY_FILE = "__MISSING_FILE__"
+
+    if len(sys.argv) > 1 and sys.argv[1] in KNOWN_COMMANDS:
+        sys.argv.insert(1, DUMMY_FILE)
+
     parser = utils.ErrorHandlingParser(prog = "trajan", formatter_class = utils.NoMetavarHelpFormatter)
 
     parser.add_argument("file", help = "LAMMPS trajectory file to be analized.", type = str)
@@ -56,8 +62,12 @@ def parse_args():
     pair_distribution.add_argument("-br", "--broaden", type = float, help = "When this flag is the idealized total correlation function is broadened to match experimental results. The value of the maximum momentum transfer Q_max should be provided in inverse angstroms for broadening.")
     pair_distribution.set_defaults(handler_class = RDFS)
 
+    args = parser.parse_args()
 
-    return parser.parse_args()
+    if args.file == DUMMY_FILE:
+        parser.error("the following arguments are required: file")
+
+    return args
 
 
 def main():

@@ -71,7 +71,7 @@ class BASE():
 
         #Max timestep set for testing
         max_ts =  float("inf")
-        max_ts =  1
+        #max_ts =  1
         with open(self.__trajectory, "r") as f:
             for line in f:
                 if self.__Nframes > max_ts:
@@ -209,6 +209,8 @@ class BASE():
                    header = header,
                    comments = "",
                    )
+
+        print(f"Analyzer output has been saved in the \"{outfile}\" file.")
 
     def analyze(self):
         print("WARNING: Handler does not perform any analyses.")

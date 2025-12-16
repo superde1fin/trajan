@@ -5,27 +5,6 @@ from . import constants
 
 _ = lambda s: s
 
-class SupportAction(argparse.Action):
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 default=False,
-                 required=False,
-                 help=None,
-                 ):
-        super(SupportAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=0,
-            const=True,
-            required=required,
-            help=help,
-            default=default)
-
-    def __call__(self, parser, namespace, values, option_strings=None):
-        setattr(namespace, self.dest, self.const)
-        namespace.handler_class.display_support()
-        parser.exit()
 
 class StrictSubParsersAction(argparse._SubParsersAction):
 

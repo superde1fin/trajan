@@ -62,3 +62,44 @@ def verbosity_type():
             raise argparse.ArgumentTypeError(f"Verbosity must be between 1 and {constants.MAX_VERBOSITY}")
         return ivalue
     return checker
+
+def parse_frame_pattern(pattern_str):
+    """
+    Parses a string in the format start:stop:step into integer values.
+    Supports '*' as a wildcard.
+
+    Examples:
+      "100"       -> start=100, stop=101, step=1 (Single frame)
+      "100:"      -> start=100, stop=Inf, step=1
+      ":200"      -> start=0,   stop=200, step=1
+      "*:*:10"    -> start=0,   stop=Inf, step=10
+      "100:200:5" -> start=100, stop=200, step=5
+    """
+    if not pattern_str:
+        return 0, float('inf'), 1
+
+    parts = pattern_str.split(':')
+
+    # Defaults
+    start = 0
+    stop = float('inf')
+    step = 1
+
+    def parse_token(token, default):
+        token = token.strip()
+        if token == "*" or token == "":
+            return default
+        return int(token)
+
+    if len(parts) == 1:
+        val = parse_token(parts[0], 0)
+        return val, val + 1, 1
+
+    if len(parts) >= 2:
+        start = parse_token(parts[0], 0)
+        stop = parse_token(parts[1], float('inf'))
+
+    if len(parts) == 3:
+        step = parse_token(parts[2], 1)
+
+    return start, stop, step

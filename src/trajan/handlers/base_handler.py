@@ -3,11 +3,13 @@ import scipy as sp
 import sys
 
 from trajan import constants
+from trajan import utils
 
 class BASE():
-    def __init__(self, filename, verbosity):
+    def __init__(self, filename, verbosity, steps):
         self.__trajectory = filename
         self.__verbosity = verbosity
+        self.__steps = steps
 
         self.__box = None
         self.__lengths = None
@@ -89,6 +91,11 @@ class BASE():
         self.__frame = 0
         self.__timesteps = list()
 
+        if run_once:
+            start, stop, step = 0, 1, 1
+        else:
+            start, stop, step = utils.parse_frame_pattern(self.__steps)
+
         with open(self.__trajectory, "r") as f:
             for line in f:
                 if "ITEM: TIMESTEP" in line:
@@ -96,8 +103,7 @@ class BASE():
                         self._postprocess(atom_lines)
                         yield self.__frame
 
-                        self.__frame += 1
-                        if run_once:
+                        if self.__frame >= stop:
                             return
 
                     read_timestep = True
@@ -105,19 +111,26 @@ class BASE():
                     atom_lines = list()
                     box_lines = list()
 
+                    record_this_step = (self.__frame >= start) and (self.__frame < stop) and ((self.__frame - start) % step == 0)
+                    if not record_this_step:
+                        read_timestep = False
+
+                    self.__frame += 1
+
+
                 elif read_timestep:
                     self.__timestep = int(line.strip())
-                    self.verbose_print(f"{self.__frame} scan of TS {self.__timestep}", verbosity = 2)
+                    self.verbose_print(f"{self.__frame - 1} scan of TS {self.__timestep}", verbosity = 2)
                     read_timestep = False
 
-                elif "ITEM: NUMBER OF ATOMS" in line:
+                elif "ITEM: NUMBER OF ATOMS" in line and record_this_step:
                     read_natoms = True
                 elif read_natoms:
                     natoms = int(line.strip())
                     self.__natoms = natoms
                     read_natoms = False
 
-                elif "ITEM: BOX BOUNDS" in line:
+                elif "ITEM: BOX BOUNDS" in line and record_this_step:
                     read_box = True
                     self.__box_periods = line.split()[-3:]
                 elif read_box:
@@ -126,7 +139,7 @@ class BASE():
                         self.__box = np.array([np.fromstring(l, sep=" ", count=2) for l in box_lines])
                         read_box = False
 
-                elif "ITEM: ATOMS" in line:
+                elif "ITEM: ATOMS" in line and record_this_step:
                     read_atoms = True
                     if not self.__columns:
                         for i, h in enumerate(line.split()[2:]):
@@ -256,3 +269,4 @@ class BASE():
         if not found:
             print(f"ERROR: Per-atom field \"{arg}\" is missing in provided trajectory file ({self.__trajectory}). Analyzer {self.__class__} requires {' '.join(args)} fields.")
             sys.exit(1)
+

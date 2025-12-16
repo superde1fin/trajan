@@ -5,7 +5,7 @@ import sys
 
 class QUNIT(BASE):
     def __init__(self, args):
-        super().__init__(args.file, args.verbose)
+        super().__init__(args.file, args.verbose, args.steps)
 
         self.qunits = None
         self.outfile = args.outfile

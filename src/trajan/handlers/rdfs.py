@@ -88,7 +88,7 @@ class RDFS(BASE):
 
         #For T(r) calculations
         type_bound = np.max(self.pairs) + 1
-        all_type_fractions = list()
+        type_fractions = np.zeros(shape = (type_bound, ))
         number_density = 0
 
         for frame_idx in self.trajectory_reader():
@@ -115,8 +115,8 @@ class RDFS(BASE):
                 n2 = atoms2.shape[0]
 
 
-                type_counts[pair[0]] = n1
-                type_counts[pair[1]] = n2
+                type_counts[pair[0]] += n1
+                type_counts[pair[1]] += n2
 
                 for i in range(0, n1, self.batch_size):
                     batch_a1 = atoms1[i : i + self.batch_size]
@@ -156,18 +156,19 @@ class RDFS(BASE):
                 n1_rho2[pair_idx] += n1 * n2/volume
 
             self.verbose_print(f"{frame_idx + 1} analysis of TS {self.get_timestep()}", verbosity = 3)
-            all_type_fractions.append(type_counts / natoms)
+            type_fractions += type_counts / natoms
 
         self.g_r += self.hist_counts / (shell_volumes[np.newaxis, :] * n1_rho2[:, np.newaxis])
 
         if self.calc_total:
-            all_type_fractions = np.array(all_type_fractions)
-            number_density /= self.get_frame() + 1
-            average_scat = np.sum(all_type_fractions * self.scat_lengths)
+            nframes = self.get_frame() + 1
+            type_fractions /= nframes
+            number_density /= nframes
+            average_scat = np.sum(type_fractions * self.scat_lengths)
             g_weighted_sum = np.zeros_like(self.edges)
 
             for pid, pair in enumerate(self.pairs):
-                weight = np.prod(all_type_fractions[pair]) * np.prod(self.scat_lengths[pair])
+                weight = np.prod(type_fractions[pair]) * np.prod(self.scat_lengths[pair])
                 if pair[0] != pair[1]:
                     weight *= 2
                 g_weighted_sum += weight * self.g_r[pid]

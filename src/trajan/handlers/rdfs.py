@@ -104,7 +104,7 @@ class RDFS(BASE):
                 frame_coords[t] = self.extract_positions(self.select_type(t))
 
             for pair_idx, pair in enumerate(self.pairs):
-                self.verbose_print(f"Calculating distribution for pair: {pair[0]} {pair[1]}", verbosity = 2)
+                self.verbose_print(f"Calculating distribution for pair: {pair[0]} {pair[1]}", verbosity = 3)
                 atoms1 = frame_coords[pair[0]]
                 atoms2 = frame_coords[pair[1]]
 
@@ -155,7 +155,7 @@ class RDFS(BASE):
 
                 n1_rho2[pair_idx] += n1 * n2/volume
 
-            self.verbose_print(f"{frame_idx + 1} analysis of TS {self.get_timestep()}", verbosity = 3)
+            self.verbose_print(f"{frame_idx + 1} analysis of TS {self.get_timestep()}", verbosity = 2)
             type_fractions += type_counts / natoms
 
         self.g_r += self.hist_counts / (shell_volumes[np.newaxis, :] * n1_rho2[:, np.newaxis])

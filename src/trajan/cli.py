@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 import argparse
 
-from .handlers import ANGLE, QUNIT, DENSITY, RDFS
+from .handlers import ANGLE, QUNIT, DENSITY, RDFS, RINGS
 
 from . import constants
 from . import utils
@@ -11,7 +11,7 @@ from . import utils
 
 
 def parse_args():
-    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf"}
+    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf", "rings"}
     DUMMY_FILE = "__MISSING_FILE__"
 
     if len(sys.argv) > 1 and sys.argv[1] in KNOWN_COMMANDS:
@@ -41,7 +41,7 @@ def parse_args():
 
 
     qunit = subparsers.add_parser("qunit", help = "Argument parser for calculating Q-unit distributions from LAMMPS-generated trajectory files.", epilog = "Verbosity Controls:\n   1 : File scan and analysis messages\n       Average Q unit\n   2 : Frame scan and analysis messages", formatter_class = utils.NoMetavarHelpFormatter)
-    qunit.add_argument("types", nargs = "+", type = int, default = [], help = "Integer values representing atomic types of network formers and connectors separated by a zero. Any connector bonding two network formers will contribute to the Qunit count of both of the network formers. Exmaple of input: 1 2 3 0 4 5; here atoms of types 1, 2, and 3 anre considered network formers and atoms of types 4 and 5 are considered network connectors.")
+    qunit.add_argument("types", nargs = "+", type = int, default = [], help = "Integer values representing atomic types of network formers and connectors separated by a zero. Any connector bonding two network formers will contribute to the Qunit count of both of the network formers. Exmaple of input: 1 2 3 0 4 5; here atoms of types 1, 2, and 3 are considered network formers and atoms of types 4 and 5 are considered network connectors.")
     qunit.add_argument("-c", "--cutoffs", nargs = "+", type = float, default = [], help = "Maximum distances between each former and connector (in Angstroms) for them to be considered bonded. Default: inf. Example: 1.1 1.2 1.3 1.4. If types supplied are (1 2 0 3 4) then C(1, 3) = 1.1, C(1, 4) = 1.2, C(2, 3) = 1.3, and C(2, 4) = 1.4.")
 
     qunit.set_defaults(handler_class = QUNIT)
@@ -61,6 +61,13 @@ def parse_args():
     pair_distribution.add_argument("-t", "--total", nargs = "+", default = [], help = "Calculate the total correlation function based on the atom type mappings or custom neutron scattering lengths.\n This flag should be followd by a space separated list of atomic names or scattering lengths for each type in ascending order. Note: This value is calculated per atom while some experimental papers normalize the result per formula unit of the material. This will require scaling the output.")
     pair_distribution.add_argument("-br", "--broaden", type = float, help = "When this flag is the idealized total correlation function is broadened to match experimental results. The value of the maximum momentum transfer Q_max should be provided in inverse angstroms for broadening.")
     pair_distribution.set_defaults(handler_class = RDFS)
+
+    ring_size = subparsers.add_parser("rings", help = "Argument parser for ring size distribution calculation from LAMMPS-generated trajectory files.", epilog = "Verbosity Controls:\n   1 : File scan and analysis messages", formatter_class = utils.NoMetavarHelpFormatter)
+    ring_size.add_argument("types", nargs = "+", type = int, default = [], help = "Integer values representing atomic types of base and connector atoms separated by a zero. Exmaple of input: 1 2 3 0 4 5; here atoms of types 1, 2, and 3 are considered base and atoms of types 4 and 5 are considered connectors.")
+    ring_size.add_argument("-c", "--cutoffs", nargs = "+", type = float, default = [], help = "Maximum distances between each base and connector atoms (in Angstroms) for them to be considered bonded. Default: inf. Example: 1.1 1.2 1.3 1.4. If types supplied are (1 2 0 3 4) then C(1, 3) = 1.1, C(1, 4) = 1.2, C(2, 3) = 1.3, and C(2, 4) = 1.4.")
+    ring_size.add_argument("-cb", "--connector-bonds", type = int, nargs = "+", default = [], help = f"Space separated list of integers that specifies the number of nearest neighbors that are considered bonded for each connector. Default: {constants.DEFAULT_CONNECTOR_BONDS}")
+    ring_size.add_argument("-m", "--max-size", type = int, default = constants.DEFAULT_MAX_RING_SIZE, help = f"Maximum detectable ring size. Default: {constants.DEFAULT_MAX_RING_SIZE}")
+    ring_size.set_defaults(handler_class = RINGS)
 
     args = parser.parse_args()
 

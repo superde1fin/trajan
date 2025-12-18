@@ -17,6 +17,7 @@ class BASE():
         self.__natoms = None
         self.__timestep = None
         self.__types = None
+        self.__num_each_type = None
 
         self.__atomic_data = None
 
@@ -64,6 +65,9 @@ class BASE():
     def get_frame(self):
         return self.__frame
 
+    def get_num_each_type(self):
+        return self.__num_each_type
+
     def parse_file(self):
         self.verbose_print(f"Peeking at trajectory file: {self.__trajectory}", verbosity = 2)
 
@@ -91,6 +95,7 @@ class BASE():
         self.__frame = 0
         self.__timesteps = list()
 
+
         if run_once:
             start, stop, step = 0, 1, 1
         else:
@@ -101,7 +106,7 @@ class BASE():
                 if "ITEM: TIMESTEP" in line:
                     if read_atoms and len(atom_lines) > 0:
                         self._postprocess(atom_lines)
-                        yield self.__frame
+                        yield self.__frame - 1
 
                         if self.__frame >= stop:
                             return
@@ -141,11 +146,23 @@ class BASE():
 
                 elif "ITEM: ATOMS" in line and record_this_step:
                     read_atoms = True
+                    count_per_type = False
                     if not self.__columns:
                         for i, h in enumerate(line.split()[2:]):
                             self.__columns[h] = i
+                    if "type" in self.__columns:
+                        count_per_type = True
+                        self.__num_each_type = dict()
                 elif read_atoms:
-                    atom_lines.append(line)
+                    split_line = np.fromstring(line, sep = " ")
+                    atom_lines.append(split_line)
+                    if count_per_type:
+                        cur_type = int(split_line[self.__columns["type"]])
+                        if not cur_type in self.__num_each_type:
+                            self.__num_each_type[cur_type] = 1
+                        else:
+                            self.__num_each_type[cur_type] += 1
+
 
         if len(atom_lines) > 0:
             self._postprocess(atom_lines)
@@ -158,7 +175,7 @@ class BASE():
         self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
 
     def _postprocess(self, atom_lines):
-        self.__atomic_data = np.loadtxt(atom_lines)
+        self.__atomic_data = np.array(atom_lines)
 
         self.__lengths = self.__box[:, 1] - self.__box[:, 0]
 
@@ -167,7 +184,12 @@ class BASE():
 
 
         if "type" in self.__columns.keys():
-            self.__types = np.sort(np.unique(self.__atomic_data[:, self.__columns["type"]]).astype(int))
+            #self.__types = np.sort(np.unique(self.__atomic_data[:, self.__columns["type"]]).astype(int))
+            self.__types = np.sort(np.array(list(self.__num_each_type.keys())))
+            tmp = self.__num_each_type
+            self.__num_each_type = np.zeros(shape = (np.max(self.__types) + 1))
+            for tp, number in tmp.items():
+                self.__num_each_type[tp] = number
 
         self.__timesteps.append(self.__timestep)
 

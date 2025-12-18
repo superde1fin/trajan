@@ -31,3 +31,7 @@ NEUTRON_SCATTERING_LENGTHS = {"Si": 4.149,
                               "Na": 3.63,
                               }
 FT_GRID_DENSITY = 1000
+
+DEFAULT_CONNECTOR_BONDS = 2
+
+DEFAULT_MAX_RING_SIZE = 20

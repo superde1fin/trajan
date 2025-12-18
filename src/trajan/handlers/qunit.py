@@ -26,7 +26,7 @@ class QUNIT(BASE):
         ncuts = len(args.cutoffs)
 
         if args.cutoffs and ncuts != nformers * nconnectors:
-            print(f"ERROR: number of cutoffs ({ncuts}) is not equal to the number of formers ({nformers}) times the number of connectors.")
+            print(f"ERROR: number of cutoffs ({ncuts}) is not equal to the number of formers ({nformers}) times the number of connectors ({nconnectors}).")
             sys.exit(1)
 
         self.parse_file()

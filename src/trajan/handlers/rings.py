@@ -48,8 +48,8 @@ class RINGS(BASE):
                         print(f"ERROR: Incorrect connector type ({c}). Types present in trajectories: {' '.join(types.astype(str))}.")
                         sys.exit(1)
                     cut = next(cutoff_iter)
-                    self.interaction_matrix[f, c] = cut
-                    self.interaction_matrix[c, f] = cut
+                    self.interaction_matrix[b, c] = cut
+                    self.interaction_matrix[c, b] = cut
 
         self.conbonds = args.connector_bonds
         nconbonds = len(self.conbonds)
@@ -78,23 +78,35 @@ class RINGS(BASE):
         for frame_idx in self.trajectory_reader():
             num_each_type = self.get_num_each_type()
             num_neighs = int(2 * np.sum(num_each_type[self.connectors] * self.conbonds) / np.sum(num_each_type[self.base]))
-            base_atoms = self.extract_positions(self.select_types(types = self.base))
+            base_atoms = self.select_types(types = self.base)
+            base_atom_positions = self.extract_positions(base_atoms)
 
-            frame_graph = np.full(shape = (base_atoms.shape[0], num_neighs), fill_value = -1)
-            neighs_recorder = np.zeros(shape = (base_atoms.shape[0], ), dtype = np.int32)
-            ring_participation_counts = np.zeros(shape = (base_atoms.shape[0], self.max_depth))
+            num_base_atoms = base_atoms.shape[0]
+
+            frame_graph = np.full(shape = (num_base_atoms, num_neighs), fill_value = -1)
+            neighs_recorder = np.zeros(shape = (num_base_atoms, ), dtype = np.int32)
+            ring_participation_counts = np.zeros(shape = (num_base_atoms, self.max_depth))
 
             for cid, connector in enumerate(self.connectors):
-                target_connectors = self.extract_positions(self.select_types(types = self.connectors))
+                target_connectors = self.select_types(types = self.connectors)
+                target_connector_positions = self.extract_positions(target_connectors)
+                connector_types = target_connectors[:, columns["type"]].astype(int)
+
                 numbonds = self.conbonds[cid]
                 norms, idx = self.get_nclosest(
-                    central = target_connectors,
-                    neighs = base_atoms,
+                    central = target_connector_positions,
+                    neighs = base_atom_positions,
                     N = numbonds,
                 )
 
-                #Implement cutoff filtering
-                #Implement fram graph expansion if truly needed
+                base_types = base_atoms[idx][..., columns["type"]].astype(int)
+                cutoff_grid = self.interaction_matrix[connector_types[:, None], base_types]
+
+                distance_mask = norms <= cutoff_grid
+                idx = idx[distance_mask.all(axis = 1)]
+
+
+                #Implement frame graph expansion if truly needed
 
                 sources = list()
                 targets = list()
@@ -126,6 +138,11 @@ class RINGS(BASE):
                 shift = neighs_recorder[all_sources]
                 #Shift relative column positions for new neighbors
                 relcol = relcol + shift
+                if np.max(relcol) >= num_neighs:
+                    new_frame_graph = np.zeroes((num_base_atoms, num_neighs * 2), dtype = np.int32)
+                    new_frame_graph[:, num_neighs] = frame_graph
+                    num_neighs *= 2
+                    frame_graph = new_frame_graph
 
                 frame_graph[all_sources, relcol] = all_targets
 
@@ -133,14 +150,14 @@ class RINGS(BASE):
 
 
 
-            visited_token = np.full(base_atoms.shape[0], fill_value = -1, dtype = np.int32)
-            dist = np.zeros(base_atoms.shape[0], dtype = np.int32)
-            parent = np.full(base_atoms.shape[0], fill_value = -1, dtype = np.int32)
-            branch_id = np.full(base_atoms.shape[0], -1, dtype = np.int32)
+            visited_token = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
+            dist = np.zeros(num_base_atoms, dtype = np.int32)
+            parent = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
+            branch_id = np.full(num_base_atoms, -1, dtype = np.int32)
 
             queue = collections.deque()
 
-            for start_node in range(base_atoms.shape[0]):
+            for start_node in range(num_base_atoms):
 
                 if frame_graph[start_node, 0] == -1:
                     continue

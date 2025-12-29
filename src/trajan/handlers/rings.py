@@ -20,6 +20,12 @@ class RINGS(BASE):
             print("ERROR: There must be a separating 0 in atom types. Please refer to the help message for the ring size analyzer.")
             sys.exit(1)
 
+        algo_letter = args.algorithm[0].lower()
+        if algo_letter == "s":
+            self.algo = self.smallest_rings
+        elif algo_letter == "p":
+            self.algo = self.primitive_rings
+
 
         nbase = len(self.base)
         nconnectors = len(self.connectors)
@@ -67,7 +73,7 @@ class RINGS(BASE):
         self.max_depth = args.max_size
 
         self.all_rings = list()
-        self.ring_values = np.arange(self.max_depth)
+        self.ring_values = np.arange(self.max_depth + 1)
 
 
         self.wrap_positions()
@@ -85,7 +91,6 @@ class RINGS(BASE):
 
             frame_graph = np.full(shape = (num_base_atoms, num_neighs), fill_value = -1)
             neighs_recorder = np.zeros(shape = (num_base_atoms, ), dtype = np.int32)
-            ring_participation_counts = np.zeros(shape = (num_base_atoms, self.max_depth))
 
             for cid, connector in enumerate(self.connectors):
                 target_connectors = self.select_types(types = self.connectors)
@@ -149,71 +154,8 @@ class RINGS(BASE):
                 neighs_recorder[unique_atoms] += neigh2add
 
 
+            ring_participation_counts = self.algo(frame_graph, frame = frame_idx)
 
-            visited_token = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
-            dist = np.zeros(num_base_atoms, dtype = np.int32)
-            parent = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
-            branch_id = np.full(num_base_atoms, -1, dtype = np.int32)
-
-            queue = collections.deque()
-
-            for start_node in range(num_base_atoms):
-
-                if frame_graph[start_node, 0] == -1:
-                    continue
-
-                current_token = start_node
-                queue.clear()
-
-                queue.append(start_node)
-                visited_token[start_node] = current_token
-                dist[start_node] = 0
-                parent[start_node] = -1
-                branch_id[start_node] = -1
-
-                found_ring = False
-
-                while queue:
-                    node = queue.popleft()
-                    #print(node)
-                    if dist[node] >= (self.max_depth / 2 ) + 1:
-                        continue
-
-                    for neigh in frame_graph[node]:
-                        if neigh == -1: break
-
-                        if neigh == parent[node]: continue
-
-                        if visited_token[neigh] == current_token:
-                            if branch_id[node] != branch_id[neigh]:
-                                current_size = dist[node] + dist[neigh] + 1
-
-                                bt_atom = node
-                                while parent[bt_atom] != -1:
-                                    ring_participation_counts[bt_atom, current_size] += 1
-                                    bt_atom = parent[bt_atom]
-
-                                bt_atom = neigh
-                                while bt_atom != -1:
-                                    ring_participation_counts[bt_atom, current_size] += 1
-                                    bt_atom = parent[bt_atom]
-
-
-
-                                found_ring = True
-                                break
-
-                        else:
-                            visited_token[neigh] = current_token
-                            dist[neigh] = dist[node] + 1
-                            parent[neigh] = node
-                            if node == start_node:
-                                branch_id[neigh] = neigh
-                            else:
-                                branch_id[neigh] = branch_id[node]
-                            queue.append(neigh)
-
-                    if found_ring: break
 
             self.all_rings.append(np.mean(ring_participation_counts, axis = 0))
             self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
@@ -222,6 +164,214 @@ class RINGS(BASE):
 
 
         print("Analysis complete")
+
+    def smallest_rings(self, frame_graph, frame):
+        num_base_atoms = frame_graph.shape[0]
+        ring_participation_counts = np.zeros(shape = (num_base_atoms, self.max_depth + 1))
+        visited_token = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
+        dist = np.zeros(num_base_atoms, dtype = np.int32)
+        parent = np.full(num_base_atoms, fill_value = -1, dtype = np.int32)
+        branch_id = np.full(num_base_atoms, -1, dtype = np.int32)
+
+        queue = collections.deque()
+
+        for start_node in range(num_base_atoms):
+            self.verbose_print(f"{100*start_node/num_base_atoms:.2f}% of timestep {timestep} (frame {frame})", verbosity = 3)
+
+            if frame_graph[start_node, 0] == -1:
+                continue
+
+            current_token = start_node
+            queue.clear()
+
+            queue.append(start_node)
+            visited_token[start_node] = current_token
+            dist[start_node] = 0
+            parent[start_node] = -1
+            branch_id[start_node] = -1
+
+            found_ring = False
+
+            while queue:
+                node = queue.popleft()
+                if dist[node] >= int(self.max_depth / 2 ) + 1:
+                    continue
+
+                for neigh in frame_graph[node]:
+                    if neigh == -1: break
+
+                    if neigh == parent[node]: continue
+
+                    if visited_token[neigh] == current_token:
+                        if branch_id[node] != branch_id[neigh]:
+                            current_size = dist[node] + dist[neigh] + 1
+                            if current_size > self.max_depth:
+                                continue
+
+                            bt_atom = node
+                            while parent[bt_atom] != -1:
+                                ring_participation_counts[bt_atom, current_size] += 1
+                                bt_atom = parent[bt_atom]
+
+                            bt_atom = neigh
+                            while bt_atom != -1:
+                                ring_participation_counts[bt_atom, current_size] += 1
+                                bt_atom = parent[bt_atom]
+
+
+
+                            found_ring = True
+                            break
+
+                    else:
+                        visited_token[neigh] = current_token
+                        dist[neigh] = dist[node] + 1
+                        parent[neigh] = node
+                        if node == start_node:
+                            branch_id[neigh] = neigh
+                        else:
+                            branch_id[neigh] = branch_id[node]
+                        queue.append(neigh)
+
+                if found_ring: break
+
+        return ring_participation_counts
+
+    def primitive_rings(self, frame_graph, frame):
+        num_base_atoms = frame_graph.shape[0]
+
+        ring_participation_counts = np.zeros(shape=(num_base_atoms, self.max_depth + 1))
+
+        visited_token = np.full(num_base_atoms, fill_value=-1, dtype=np.int32)
+        dist = np.zeros(num_base_atoms, dtype=np.int32)
+        parent = np.full(num_base_atoms, fill_value=-1, dtype=np.int32)
+        branch_id = np.full(num_base_atoms, -1, dtype=np.int32)
+
+        queue = collections.deque()
+
+        search_limit = (self.max_depth // 2) + 1
+        timestep = self.get_timestep()
+
+        for start_node in range(num_base_atoms):
+            self.verbose_print(f"{100*start_node/num_base_atoms:.2f}% of timestep {timestep} (frame {frame})", verbosity = 3)
+            if frame_graph[start_node, 0] == -1:
+                continue
+
+            current_token = start_node
+            queue.clear()
+            queue.append(start_node)
+
+            visited_token[start_node] = current_token
+            dist[start_node] = 0
+            parent[start_node] = -1
+            branch_id[start_node] = -1
+
+            while queue:
+                node = queue.popleft()
+
+                if dist[node] >= search_limit:
+                    continue
+
+                for neigh in frame_graph[node]:
+                    if neigh == -1: break
+                    if neigh == parent[node]: continue
+
+                    if visited_token[neigh] == current_token:
+
+                        if branch_id[node] != branch_id[neigh]:
+
+                            if node > neigh: continue
+
+                            current_size = dist[node] + dist[neigh] + 1
+
+                            if current_size <= self.max_depth:
+
+                                ring_atoms = list()
+                                bt_atom = neigh
+                                while bt_atom != -1:
+                                    ring_atoms.append(bt_atom)
+                                    bt_atom = parent[bt_atom]
+                                ring_atoms = ring_atoms[::-1]
+
+                                bt_atom = node
+                                while parent[bt_atom] != -1:
+                                    ring_atoms.append(bt_atom)
+                                    bt_atom = parent[bt_atom]
+
+                                is_primitive = True
+                                half_ring = current_size // 2
+                                for i in range(half_ring):
+                                    shortest_path = self.shortest_path(frame_graph, ring_atoms[i], ring_atoms[half_ring + i], half_ring)
+                                    is_primitive *= (shortest_path >= half_ring)
+
+
+                                if is_primitive:
+                                    ring_participation_counts[start_node, current_size] += 1
+
+                    else:
+                        visited_token[neigh] = current_token
+                        dist[neigh] = dist[node] + 1
+                        parent[neigh] = node
+
+                        if node == start_node:
+                            branch_id[neigh] = neigh
+                        else:
+                            branch_id[neigh] = branch_id[node]
+
+                        queue.append(neigh)
+
+
+        return ring_participation_counts
+
+    def shortest_path(self, frame_graph, start, target, limit=None):
+        if start == target:
+            return 0
+
+        visited_fwd = {start: 0}
+        visited_bwd = {target: 0}
+
+        q_fwd = collections.deque([start])
+        q_bwd = collections.deque([target])
+
+        shortest_dist = float('inf')
+
+        while q_fwd and q_bwd:
+            if len(q_fwd) <= len(q_bwd):
+                active_q = q_fwd
+                active_visited = visited_fwd
+                other_visited = visited_bwd
+            else:
+                active_q = q_bwd
+                active_visited = visited_bwd
+                other_visited = visited_fwd
+
+            curr = active_q.popleft()
+            curr_dist = active_visited[curr]
+
+            if limit is not None and (curr_dist >= limit):
+                continue
+
+            if curr_dist + 1 >= shortest_dist:
+                continue
+
+            for neigh in frame_graph[curr]:
+                if neigh == -1: break
+
+                if neigh in other_visited:
+                    found_dist = curr_dist + 1 + other_visited[neigh]
+
+                    if found_dist < shortest_dist:
+                        shortest_dist = found_dist
+
+                        if limit is not None and shortest_dist < limit:
+                            return shortest_dist
+
+                if neigh not in active_visited:
+                    if limit is None or (curr_dist + 1 < limit):
+                        active_visited[neigh] = curr_dist + 1
+                        active_q.append(neigh)
+
+        return shortest_dist
 
     def write(self):
 

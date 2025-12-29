@@ -67,6 +67,7 @@ def parse_args():
     ring_size.add_argument("-c", "--cutoffs", nargs = "+", type = float, default = [], help = "Maximum distances between each base and connector atoms (in Angstroms) for them to be considered bonded. Default: inf. Example: 1.1 1.2 1.3 1.4. If types supplied are (1 2 0 3 4) then C(1, 3) = 1.1, C(1, 4) = 1.2, C(2, 3) = 1.3, and C(2, 4) = 1.4.")
     ring_size.add_argument("-cb", "--connector-bonds", type = int, nargs = "+", default = [], help = f"Space separated list of integers that specifies the number of nearest neighbors that are considered bonded for each connector. Default: {constants.DEFAULT_CONNECTOR_BONDS}")
     ring_size.add_argument("-m", "--max-size", type = int, default = constants.DEFAULT_MAX_RING_SIZE, help = f"Maximum detectable ring size. Default: {constants.DEFAULT_MAX_RING_SIZE}")
+    ring_size.add_argument("-a", "--algorithm", type = str, default = constants.DEFAULT_RING_ALGORITHM, help = f"Switch between p (primitive) and s (smallest) ring detecting algorithm. Default: {constants.DEFAULT_RING_ALGORITHM}.")
     ring_size.set_defaults(handler_class = RINGS)
 
     args = parser.parse_args()

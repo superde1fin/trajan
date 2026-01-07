@@ -117,6 +117,7 @@ trajan glass.lammpstrj rings 1 0 2 -c 1.8 -m 12 -a p
 - `-cb` / `--connector-bonds`: Max number of bonds for each connector type (default: 2).
 - `-m` / `--max-size`: Maximum ring size to detect (default: 10).
 - `-a` / `--algorithm`: Algorithm choice: `p` for Primitive or `s` for Smallest rings.
+- '-p' / `--paral-mode`: Parallelization choice: `a` for atoms or `f` for frame based (not yet implemented).
 
 ## 📚 Documentation
 

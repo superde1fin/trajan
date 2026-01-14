@@ -486,8 +486,8 @@ class RINGS(BASE):
 
     def write(self):
 
-        super().write(data = np.column_stack((self.ring_values, self.mean_rings)),
-                      header = "Ring size, ",
+        super().write(data = np.column_stack((self.ring_values, self.mean_rings, self.deviations)),
+                      header = "Ring size, ring_counts, deviations",
                       outfile = self.outfile,
                       )
 
@@ -503,3 +503,4 @@ class RINGS(BASE):
             super().statistics(stats_dict = stats_dict)
         else:
             self.mean_rings = np.zeros_like(self.ring_values)
+            self.deviations = np.zeros_like(self.ring_values)

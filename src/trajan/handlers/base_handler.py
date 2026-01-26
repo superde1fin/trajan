@@ -122,6 +122,7 @@ class BASE():
         atom_lines = list()
 
         self.__frame = 0
+        self.__user_frame = 0
         self.__timesteps = list()
 
 
@@ -138,6 +139,7 @@ class BASE():
                         yield self.__frame - 1
 
                         if self.__frame >= stop:
+                            self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
                             return
 
                     read_timestep = True

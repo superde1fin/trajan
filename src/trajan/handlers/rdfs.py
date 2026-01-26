@@ -29,7 +29,7 @@ class RDFS(BASE):
             self.mappings = np.array(args.total)
             present_types = self.get_types()
             if self.mappings.size != present_types.size:
-                print(f"ERROR: Number of provided mappings ({self.mappings.size}) is not equal to the number of present types ({present_types.size}).")
+                self.verbose_print(f"ERROR: Number of provided mappings ({self.mappings.size}) is not equal to the number of present types ({present_types.size}).")
                 sys.exit(1)
             else:
                 self.scat_lengths = np.zeros(shape = (np.max(present_types) + 1, ))
@@ -40,7 +40,7 @@ class RDFS(BASE):
                         if self.mappings[i] in constants.NEUTRON_SCATTERING_LENGTHS.keys():
                             self.scat_lengths[present_types[i]] = constants.NEUTRON_SCATTERING_LENGTHS[self.mappings[i]]
                         else:
-                            print(f"Element ({self.mappings[i]}) is not currently supported)")
+                            self.verbose_print(f"Element ({self.mappings[i]}) is not currently supported)")
                             input_accepted = False
                             while not input_accepted:
                                 scat_input = input("Please proivide custom neutron scattering length: ")
@@ -56,7 +56,7 @@ class RDFS(BASE):
             self.pairs = np.array(args.pair)
         else:
             if self.calc_total:
-                print("WARNING: You have invoked the total correlation function calculations. For this each pairwise radial distribution function has to be computed. -p/--pairs argument is disregarded.\n")
+                self.verbose_print("WARNING: You have invoked the total correlation function calculations. For this each pairwise radial distribution function has to be computed. -p/--pairs argument is disregarded.\n")
             types = self.get_types()
             self.pairs = types[np.column_stack(np.triu_indices(types.size))]
 
@@ -65,7 +65,7 @@ class RDFS(BASE):
         self.broaden = False
         if hasattr(args, "broaden"):
             if not self.calc_total:
-                print("WARNING: Broadening of the total correlation function requested, without the request for T(r) itself. This will be ignored.\n")
+                self.verbose_print("WARNING: Broadening of the total correlation function requested, without the request for T(r) itself. This will be ignored.\n")
             else:
                 self.broaden = True
                 self.Qmax = args.broaden
@@ -155,13 +155,13 @@ class RDFS(BASE):
 
                 n1_rho2[pair_idx] += n1 * n2/volume
 
-            self.verbose_print(f"{frame_idx + 1} analysis of TS {self.get_timestep()}", verbosity = 2)
+            self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
             type_fractions += type_counts / natoms
 
         self.g_r += self.hist_counts / (shell_volumes[np.newaxis, :] * n1_rho2[:, np.newaxis])
 
         if self.calc_total:
-            nframes = self.get_frame() + 1
+            nframes = self.get_user_frame()
             type_fractions /= nframes
             number_density /= nframes
             average_scat = np.sum(type_fractions * self.scat_lengths)
@@ -199,7 +199,7 @@ class RDFS(BASE):
                 self.broad_T_r = T_0 + broadened
 
 
-        print("Analysis complete")
+        self.verbose_print("Analysis complete")
 
     def write(self):
         data = np.column_stack((self.edges, self.g_r.T))

@@ -39,6 +39,8 @@ class BASE():
 
         self.__timesteps = list()
 
+        self.__frame_start, self.__frame_stop, self.__frame_step = utils.parse_frame_pattern(self.__steps)
+
         if HAS_MPI:
             self.__comm = MPI.COMM_WORLD
             self.__rank = self.__comm.Get_rank()
@@ -47,6 +49,9 @@ class BASE():
             self.__rank = 0
             self.__size = 1
             self.__comm = None
+
+    def get_frame_step(self):
+        return self.__frame_step
 
     def get_comm(self):
         return self.__comm
@@ -140,7 +145,7 @@ class BASE():
         if run_once:
             start, stop, step = 0, 1, 1
         else:
-            start, stop, step = utils.parse_frame_pattern(self.__steps)
+            start, stop, step = self.__frame_start, self.__frame_stop, self.__frame_step
 
         with open(self.__trajectory, "r") as f:
             for line in self._get_line_iterator(f):
@@ -249,6 +254,15 @@ class BASE():
             print(*args)
 
         sys.stdout.flush()
+
+    def extract_columns(self, *columns):
+        self.check_required_columns(*columns)
+        indices = np.empty_like(columns, dtype = np.int32)
+        for i, colname in enumerate(columns):
+            indices[i] = self.__columns[colname]
+
+        return self.__atomic_data[:, indices]
+
 
     def extract_positions(self, target_array):
         if target_array.shape[-1] != self.__atomic_data.shape[-1]:

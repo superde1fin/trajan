@@ -22,6 +22,12 @@ DISTANCE_CONVERSIONS = {"real": 1e-8,
                         "metal": 1e-8,
 }
 
+#In s
+TIMESTEPS = {"real": 1e-15,
+             "metal": 1e-12,
+}
+
+
 DEFAULT_RDF_CUTOFF = 10 #A
 DEFAULT_ATOM_BATCH = 1000
 
@@ -41,3 +47,9 @@ DEFAULT_RING_ALGORITHM = "smallest"
 DEFAULT_PARAL_MODE = "frame"
 
 DEFAULT_BUFFER_MB = 0
+
+DEFAULT_LAG_STEP = 1
+
+DEFAULT_TIMESTEP_NUM = 1
+
+DEFAULT_VDOS_TAPER = 0.1

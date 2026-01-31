@@ -354,7 +354,7 @@ class RINGS(BASE):
 
         visited_token = np.full(num_base_atoms, fill_value=-1, dtype=np.int32)
         dist = np.zeros(num_base_atoms, dtype=np.int32)
-        parent = np.full(num_base_atoms, fill_value=-1, dtype=np.int32)
+        parents = [[] for _ in range(num_base_atoms)]
         branch_id = np.full(num_base_atoms, -1, dtype=np.int32)
 
         queue = collections.deque()
@@ -374,7 +374,7 @@ class RINGS(BASE):
 
             visited_token[start_node] = current_token
             dist[start_node] = 0
-            parent[start_node] = -1
+            parents[start_node] = [-1]
             branch_id[start_node] = -1
 
             while queue:
@@ -385,44 +385,62 @@ class RINGS(BASE):
 
                 for neigh in frame_graph[node]:
                     if neigh == -1: break
-                    if neigh == parent[node]: continue
+
+                    if neigh in parents[node]: continue
 
                     if visited_token[neigh] == current_token:
 
+
                         if branch_id[node] != branch_id[neigh]:
 
-                            if node > neigh: continue
+                            if dist[node] == dist[neigh]:
+                                if node > neigh: continue
 
                             current_size = dist[node] + dist[neigh] + 1
 
                             if current_size <= self.max_depth:
+                                paths_to_node = self._get_all_paths(node, parents)
+                                paths_to_neigh = self._get_all_paths(neigh, parents)
 
-                                ring_atoms = list()
-                                bt_atom = neigh
-                                while bt_atom != -1:
-                                    ring_atoms.append(bt_atom)
-                                    bt_atom = parent[bt_atom]
-                                ring_atoms = ring_atoms[::-1]
+                                for path_a in paths_to_node:
+                                    for path_b in paths_to_neigh:
 
-                                bt_atom = node
-                                while parent[bt_atom] != -1:
-                                    ring_atoms.append(bt_atom)
-                                    bt_atom = parent[bt_atom]
+                                        if len(set(path_a[1:]) & set(path_b[1:])) > 0:
+                                            continue
 
-                                is_primitive = True
-                                half_ring = current_size // 2
-                                for i in range(half_ring):
-                                    shortest_path = self.shortest_path(frame_graph, ring_atoms[i], ring_atoms[half_ring + i], half_ring)
-                                    is_primitive *= (shortest_path >= half_ring)
+                                        ring_atoms = path_a[::-1] + path_b[1:]
+                                        is_primitive = True
+                                        # Check EVERY node against its antipodes
+                                        for i in range(current_size):
+                                            half_dist = current_size // 2
+
+                                            # Check the primary antipode
+                                            target_1 = (i + half_dist) % current_size
+                                            path_len = self.shortest_path(frame_graph, ring_atoms[i], ring_atoms[target_1], limit=half_dist)
+                                            if path_len < half_dist:
+                                                is_primitive = False
+                                                break
+
+                                            # If odd, MUST check the second antipode
+                                            if current_size % 2 == 1:
+                                                target_2 = (i + half_dist + 1) % current_size
+                                                path_len_2 = self.shortest_path(frame_graph, ring_atoms[i], ring_atoms[target_2], limit=half_dist)
+                                                if path_len_2 < half_dist:
+                                                    is_primitive = False
+                                                    break
 
 
-                                if is_primitive:
-                                    ring_participation_counts[start_node, current_size] += 1
+                                        if is_primitive:
+                                            ring_participation_counts[start_node, current_size] += 1
+
+                        if dist[neigh] == dist[node] + 1:
+                            if node not in parents[neigh]:
+                                parents[neigh].append(node)
 
                     else:
                         visited_token[neigh] = current_token
                         dist[neigh] = dist[node] + 1
-                        parent[neigh] = node
+                        parents[neigh] = [node]
 
                         if node == start_node:
                             branch_id[neigh] = neigh
@@ -433,6 +451,18 @@ class RINGS(BASE):
 
 
         return ring_participation_counts
+
+    def _get_all_paths(self, current_node, parents_list):
+            if parents_list[current_node] == [-1]:
+                return [[current_node]]
+
+            all_paths = []
+            for p in parents_list[current_node]:
+                parent_paths = self._get_all_paths(p, parents_list)
+                for path in parent_paths:
+                    all_paths.append(path + [current_node])
+
+            return all_paths
 
     def shortest_path(self, frame_graph, start, target, limit=None):
         if start == target:

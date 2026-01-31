@@ -80,7 +80,7 @@ def parse_args():
     vdos.add_argument("-u", "--units", type = str, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.", default = constants.DEFAULT_UNITS)
     vdos.add_argument("-l", "--lag-step", type = int, help = f"Velocity autocorrelation function resolution in simulation time units. Default: timestep", default = None)
     vdos.add_argument("-t", "--taper", type = int, help = f"Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
-    vdos.add_argument("-p", "--padding", type = int, help = f"End zero padding size as a fraction of velocity autocorrelation length . Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
+    vdos.add_argument("-p", "--padding", type = int, help = f"End zero padding size as a fraction of velocity autocorrelation length. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
 
     vdos.set_defaults(handler_class = VDOS)
 

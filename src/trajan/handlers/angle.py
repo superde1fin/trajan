@@ -112,7 +112,7 @@ class ANGLE(BASE):
 
             bond_angles.append(theta)
 
-            self.verbose_print(f"{frame_idx + 1} analysis of TS {self.get_timestep()}", verbosity = 2)
+            self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
 
         print("Analysis complete")
         self.bond_angles = np.concatenate(bond_angles)

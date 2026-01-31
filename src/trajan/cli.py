@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 import argparse
 
-from .handlers import ANGLE, QUNIT, DENSITY, RDFS, RINGS
+from .handlers import ANGLE, QUNIT, DENSITY, RDFS, RINGS, VDOS
 
 from . import constants
 from . import utils
@@ -11,7 +11,7 @@ from . import utils
 
 
 def parse_args():
-    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf", "rings"}
+    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf", "rings", "vdos"}
     DUMMY_FILE = "__MISSING_FILE__"
 
     if len(sys.argv) > 1 and sys.argv[1] in KNOWN_COMMANDS:
@@ -72,6 +72,17 @@ def parse_args():
     ring_size.add_argument("-a", "--algorithm", type = str, default = constants.DEFAULT_RING_ALGORITHM, help = f"Switch between p (primitive) and s (smallest) ring detecting algorithm. Default: {constants.DEFAULT_RING_ALGORITHM}.")
     ring_size.add_argument("-p", "--paral-mode", type = str, default = constants.DEFAULT_PARAL_MODE, help = f"MPI Parallelization strategy. 'atom': Rank 0 reads/builds graph, all Ranks search rings. 'frame': Ranks process different frames independently. Default: {constants.DEFAULT_PARAL_MODE}. Note: Ignored for single processor runs.")
     ring_size.set_defaults(handler_class = RINGS)
+
+
+    vdos = subparsers.add_parser("vdos", help = "Argument parser for the vibrational density of states (vDOS) calculation from LAMMPS-generated trajectory files.", formatter_class = utils.NoMetavarHelpFormatter)
+    vdos.add_argument("timestep", type = float, help = "Difference in simulation time between recorded timesteps. Comment: This is rarely simulation timestep. Default: {constants.DEFAULT_TIMESTEP_NUM}", default = constants.DEFAULT_TIMESTEP_NUM)
+    vdos.add_argument("-m", "--max-timelag", type = float, help = "Maximum velocity autocorrelation function time difference in simulation units. Default: MaxTime", default = np.inf)
+    vdos.add_argument("-u", "--units", type = str, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.", default = constants.DEFAULT_UNITS)
+    vdos.add_argument("-l", "--lag-step", type = int, help = f"Velocity autocorrelation function resolution in simulation time units. Default: timestep", default = None)
+    vdos.add_argument("-t", "--taper", type = int, help = f"Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
+    vdos.add_argument("-p", "--padding", type = int, help = f"End zero padding size as a fraction of velocity autocorrelation length. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
+
+    vdos.set_defaults(handler_class = VDOS)
 
     args = parser.parse_args()
 

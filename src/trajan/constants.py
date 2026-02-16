@@ -53,3 +53,6 @@ DEFAULT_LAG_STEP = 1
 DEFAULT_TIMESTEP_NUM = 1
 
 DEFAULT_VDOS_TAPER = 0.1
+
+#Speed of light m/s
+c = 2.9979e8

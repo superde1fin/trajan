@@ -74,13 +74,13 @@ def parse_args():
     ring_size.set_defaults(handler_class = RINGS)
 
 
-    vdos = subparsers.add_parser("vdos", help = "Argument parser for the vibrational density of states (vDOS) calculation from LAMMPS-generated trajectory files.", formatter_class = utils.NoMetavarHelpFormatter)
+    vdos = subparsers.add_parser("vdos", help = "Argument parser for the vibrational density of states (vDOS) calculation from LAMMPS-generated trajectory files.", epilog = "Verbosity Controls:\n   1 : File scan and analysis messages\n       Simulation and numerical resolutions (cm^-1)\n       Effective timestep (simulation units)\n   2 : Frame scan and analysis messages\n   3 : Autocorellation file output", formatter_class = utils.NoMetavarHelpFormatter)
     vdos.add_argument("timestep", type = float, help = f"Difference in simulation time between recorded timesteps. Comment: This is rarely simulation timestep. Default: {constants.DEFAULT_TIMESTEP_NUM}", default = constants.DEFAULT_TIMESTEP_NUM)
     vdos.add_argument("-m", "--max-timelag", type = float, help = "Maximum velocity autocorrelation function time difference in simulation units. Default: MaxTime", default = np.inf)
     vdos.add_argument("-u", "--units", type = str, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.", default = constants.DEFAULT_UNITS)
-    vdos.add_argument("-l", "--lag-step", type = int, help = f"Velocity autocorrelation function resolution in simulation time units. Default: timestep", default = None)
+    vdos.add_argument("-l", "--lag-step", type = float, help = f"Velocity autocorrelation function resolution in simulation time units. Default: timestep", default = None)
     vdos.add_argument("-t", "--taper", type = int, help = f"Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
-    vdos.add_argument("-p", "--padding", type = int, help = f"End zero padding size as a fraction of velocity autocorrelation length. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
+    vdos.add_argument("-r", "--resolution", type = int, help = f"Desired vDOS frequency resolution in cm^-1. Note: Default: None.", default = None)
 
     vdos.set_defaults(handler_class = VDOS)
 

@@ -157,7 +157,7 @@ trajan glass.lammpstrj vdos 0.05 -m 100 -t 0.05
 - `-u` / `--units`: LAMMPS unit set for conversion.
 - `-l` / `--lag-step`: Velocity autocorrelation function resolution in simulation time units.
 - `-t` / `--taper`: Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT.
-- `-p` / `--padding`: End zero padding size as a fraction of velocity autocorrelation length.
+- `-p` / `--resolution`: Desired vDOS frequency resolution in cm^-1.
 
 
 ## 📚 Documentation

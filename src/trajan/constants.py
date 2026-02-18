@@ -56,3 +56,14 @@ DEFAULT_VDOS_TAPER = 0.1
 
 #Speed of light m/s
 c = 2.9979e8
+
+#Plank's Constant J*s
+h = 6.62607015e-34
+
+#Boltzmann's Constant J/K
+kB = 1.380649e-23
+
+ROOM_TEMP = 300
+
+#Electroncharge (C)
+electron = 1.602e-19

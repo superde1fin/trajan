@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 import argparse
 
-from .handlers import ANGLE, QUNIT, DENSITY, RDFS, RINGS, VDOS
+from .handlers import ANGLE, QUNIT, DENSITY, RDFS, RINGS, VDOS, FTIR
 
 from . import constants
 from . import utils
@@ -11,7 +11,7 @@ from . import utils
 
 
 def parse_args():
-    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf", "rings", "vdos"}
+    KNOWN_COMMANDS = {"angle", "qunit", "density", "rdf", "rings", "vdos", "ftir"}
     DUMMY_FILE = "__MISSING_FILE__"
 
     if len(sys.argv) > 1 and sys.argv[1] in KNOWN_COMMANDS:
@@ -83,6 +83,20 @@ def parse_args():
     vdos.add_argument("-r", "--resolution", type = int, help = f"Desired vDOS frequency resolution in cm^-1. Note: Default: None.", default = None)
 
     vdos.set_defaults(handler_class = VDOS)
+
+
+    ftir = subparsers.add_parser("ftir", help = "Argument parser for the infrared absorption spectrum calculation from LAMMPS-generated trajectory files.", epilog = "Verbosity Controls:\n   1 : File scan and analysis messages\n       Simulation and numerical resolutions (cm^-1)\n       Effective timestep (simulation units)\n   2 : Frame scan and analysis messages\n   3 : Autocorellation file output", formatter_class = utils.NoMetavarHelpFormatter)
+    ftir.add_argument("timestep", type = float, help = f"Difference in simulation time between recorded timesteps. Comment: This is rarely simulation timestep. Default: {constants.DEFAULT_TIMESTEP_NUM}", default = constants.DEFAULT_TIMESTEP_NUM)
+    ftir.add_argument("temperature", type = float, help = f"Temperature of the simulation in Kelvin. Default: {constants.ROOM_TEMP}", default = constants.ROOM_TEMP)
+    ftir.add_argument("-m", "--max-timelag", type = float, help = "Maximum charge flux autocorrelation function time difference in simulation units. Default: MaxTime", default = np.inf)
+    ftir.add_argument("-u", "--units", type = str, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.", default = constants.DEFAULT_UNITS)
+    ftir.add_argument("-l", "--lag-step", type = float, help = f"Charge flux autocorrelation function resolution in simulation time units. Default: timestep", default = None)
+    ftir.add_argument("-t", "--taper", type = int, help = f"Fraction of charge flux autocorrelation function to be tapered down to 0 for a clean FFT. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
+    ftir.add_argument("-r", "--resolution", type = int, help = f"Desired IR absorption frequency resolution in cm^-1. Note: Default: None.", default = None)
+    ftir.add_argument("-q", "--quantum-correction", action = "store_true", help = f"Quantum-mechanical correction for high frequency mode emission.  Default: False", default = False)
+
+
+    ftir.set_defaults(handler_class = FTIR)
 
     args = parser.parse_args()
 

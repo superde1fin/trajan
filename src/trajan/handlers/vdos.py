@@ -39,7 +39,7 @@ class VDOS(BASE):
 
         self.parse_file()
 
-        self.check_required_columns("vx", "vy", "vz")
+        self.check_required_columns("mass", "vx", "vy", "vz")
 
         self.autocorrel = list()
         self.autocount = list()
@@ -62,6 +62,7 @@ class VDOS(BASE):
                 self.autocount.append(0)
 
             current_velocities = self.extract_columns("vx", "vy", "vz")
+            current_masses = self.extract_column("mass")
             self.history.append(current_velocities)
 
             for tau, past_velocities in enumerate(reversed(self.history)):
@@ -71,7 +72,7 @@ class VDOS(BASE):
                 storage_idx = tau // self.lag_step
 
                 self.autocount[storage_idx] += 1
-                self.autocorrel[storage_idx] += np.einsum("ij,ij->", current_velocities, past_velocities) / current_velocities.shape[0]
+                self.autocorrel[storage_idx] += np.einsum("i,ij,ij->", current_masses, current_velocities, past_velocities) / current_velocities.shape[0]
 
 
             self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
@@ -106,8 +107,9 @@ class VDOS(BASE):
 
         self.tapered_autocorrel = self.autocorrel * window
 
+        dt_seconds = self.timestep * self.lag_step
         vdos_complex = np.fft.rfft(self.tapered_autocorrel, n = self.padding_total)
-        self.vDOS = vdos_complex.real
+        self.vDOS = vdos_complex.real * dt_seconds
 
         #Conversion from Hz to cm^-1
         self.frequencies = np.fft.rfftfreq(self.padding_total, d = self.timestep * self.lag_step) / c_cm_s

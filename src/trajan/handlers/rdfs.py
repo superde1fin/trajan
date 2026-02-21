@@ -24,6 +24,8 @@ class RDFS(BASE):
 
         self.wrap_positions()
 
+        self.calc_coord = args.coordination_number
+
         if args.total:
             self.calc_total = True
             self.mappings = np.array(args.total)
@@ -87,7 +89,7 @@ class RDFS(BASE):
         inv_bin_width = 1.0 / bin_width
 
         #For T(r) calculations
-        type_bound = np.max(self.pairs) + 1
+        type_bound = self.get_types().size + 1
         type_fractions = np.zeros(shape = (type_bound, ))
         number_density = 0
 
@@ -99,6 +101,7 @@ class RDFS(BASE):
             natoms = self.get_natoms()
             number_density += natoms / volume
             type_fractions += current_type_counts / natoms
+            self.total_n1 = np.zeros(shape = (self.pairs.shape[0], ), dtype = np.int64)
 
             frame_coords = dict()
             for t in np.unique(self.pairs):
@@ -114,6 +117,7 @@ class RDFS(BASE):
 
                 n1 = atoms1.shape[0]
                 n2 = atoms2.shape[0]
+                self.total_n1[pair_idx] += n1
 
 
 
@@ -161,6 +165,8 @@ class RDFS(BASE):
             self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
 
         self.g_r += self.hist_counts / (shell_volumes[np.newaxis, :] * n1_rho2[:, np.newaxis])
+        if self.calc_coord:
+            self.coordination = np.cumsum(self.hist_counts, axis = 1) / self.total_n1[:, np.newaxis]
 
         if self.calc_total:
             nframes = self.get_user_frame()
@@ -212,6 +218,9 @@ class RDFS(BASE):
         if self.broaden:
             data = np.column_stack((data, self.broad_T_r))
             header += ", broad T(r)"
+        if self.calc_coord:
+            data = np.column_stack((data, self.coordination.T))
+            header += ", " + "(CN),".join([f"{pair[0]}-{pair[1]}" for pair in self.pairs]) + "(CN)"
         super().write(data = data,
                       header = header,
                       outfile = self.outfile,

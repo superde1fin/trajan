@@ -26,6 +26,15 @@ class RDFS(BASE):
 
         self.calc_coord = args.coordination_number
 
+        if not args.scatter is None:
+            if not args.total:
+                self.verbose_print("WARNING: Scattering factors' calculation was requested without the scattering lengths provided. Please invoke the -t / --total option. No scattering will be calculated.")
+                self.calc_scatter = False
+            else:
+                self.calc_scatter = True
+        else:
+            self.calc_scatter = False
+
         if args.total:
             self.calc_total = True
             self.mappings = np.array(args.total)
@@ -65,12 +74,32 @@ class RDFS(BASE):
         self.batch_size = args.batch_size
 
         self.broaden = False
+        self.Qmax = None
         if args.broaden:
             if not self.calc_total:
                 self.verbose_print("WARNING: Broadening of the total correlation function requested, without the request for T(r) itself. This will be ignored.\n")
             else:
                 self.broaden = True
                 self.Qmax = args.broaden
+
+        if self.calc_scatter:
+            if len(args.scatter) > 2:
+                self.verbose_print("WARNING: Too many arguments supplied to -s / --scatter. Only first two will be interpreted as momentum resolution and maximum momentum.")
+            args.scatter = args.scatter[:2]
+            if len(args.scatter) == 2:
+                self.dq, self.sQmax = args.scatter
+            else:
+                if self.Qmax is None:
+                    self.verbose_print("ERROR: No maximum momentum transfer value Q_max was defined. Either provide it by invoking -br / --broaden or as a second argument of -s / -scatter")
+                    sys.exit(1)
+                else:
+                    self.sQmax = self.Qmax
+
+                if len(args.scatter) == 1:
+                    self.dq = args.scatter[0]
+                else:
+                    self.dq = np.pi / self.cutoff
+                    self.verbose_print(f"WARNING: No momentum grid resolution provided. The MD limiting resolution of pi / cutoff will be applied ({round(self.dq, 3)}).\n")
 
 
 
@@ -183,11 +212,23 @@ class RDFS(BASE):
 
             self.T_r = 4 * np.pi * self.edges * number_density * g_weighted_sum * 0.01
 
+            T_0 = 4 * np.pi * number_density * self.edges * 0.01 * (average_scat**2)
+            oscillations = self.T_r - T_0
+
+            if self.calc_scatter:
+                self.q_grid = np.arange(0.01, self.sQmax + self.dq, self.dq)
+
+                Q_2d = self.q_grid[:, np.newaxis]
+                r_2d = self.edges[np.newaxis, :]
+
+                integrand = oscillations[np.newaxis, :] * np.sin(Q_2d * r_2d)
+                integral = scipy.integrate.simpson(integrand, x=self.edges, axis=-1)
+
+                self.i_Q = integral / self.q_grid
+                self.S_Q = 1.0 + (self.i_Q / 0.01 * (average_scat**2))
+
+            #Lorch Broadening
             if self.broaden:
-
-                T_0 = 4 * np.pi * number_density * self.edges * 0.01 * (average_scat**2)
-                oscillations = self.T_r - T_0
-
                 dr = self.edges[1] - self.edges[0]
                 npoints = int(np.ceil(100 * 2 * np.pi / self.Qmax / dr))
                 kernel_r = np.arange(-npoints, npoints + 1) * dr
@@ -225,6 +266,14 @@ class RDFS(BASE):
                       header = header,
                       outfile = self.outfile,
                       )
+
+        if self.calc_scatter:
+            data = np.column_stack((self.q_grid, self.i_Q, self.S_Q))
+            header = "Q, i_Q, S_Q"
+            super().write(data = data,
+                          header = header,
+                          outfile = "scatter_" + self.outfile,
+                          )
 
     def statistics(self):
         verbosity = self.get_verbosity()

@@ -119,8 +119,10 @@ trajan glass.lammpstrj rdf -t Si O Na -br 25.0
 - `-p` / `--pair`: Atomic type pairs for selecting specific partial distribution functions.
 - `-b` / `--bincount`: Number of bins for the radial distribution functions.
 - `-bs` / `--batch-size`: Number of atoms whose neighbors are analyzed at a time.
+- `-cn` / `--coordination-number`: Command line switch to invoke the coordination number calculation for each of the analyzed atomic pairs.
 - `-t` / `--total`: Calculate the total correlation function based on the atom type mappings or custom neutron scattering lengths.
-- `-b` / `--broaden`: When this flag is the idealized total correlation function is broadened to match experimental results.
+- `-br` / `--broaden`: When this flag is the idealized total correlation function is broadened to match experimental results.
+- `-s` / `--scatter`: Command line switch to invoke scattering factors' calculation. This flag can be supplied with maximum of two values: dq (momentum resolution) and Qmax (maximum momentum transfer)
 
 ---
 
@@ -141,10 +143,10 @@ trajan glass.lammpstrj rings 1 0 2 -c 1.8 -m 12 -a p
 - `-cb` / `--connector-bonds`: Max number of bonds for each connector type (default: 2).
 - `-m` / `--max-size`: Maximum ring size to detect (default: 10).
 - `-a` / `--algorithm`: Algorithm choice: `p` for Primitive or `s` for Smallest rings.
-- '-p' / `--paral-mode`: Parallelization choice: `a` for atoms or `f` for frame based (not yet implemented).
+- `-p` / `--paral-mode`: Parallelization choice: `a` for atoms or `f` for frame based (not yet implemented).
 
 ### 5. Vibrational Density of States (`vdos`)
-Combines the per-atom velocity data of a simulation to generate the vibrational frequency analysis.
+Combines the per-atom mass and velocity data of a simulation to generate the vibrational frequency analysis.
 
 **Example:**
 ```bash
@@ -157,7 +159,24 @@ trajan glass.lammpstrj vdos 0.05 -m 100 -t 0.05
 - `-u` / `--units`: LAMMPS unit set for conversion.
 - `-l` / `--lag-step`: Velocity autocorrelation function resolution in simulation time units.
 - `-t` / `--taper`: Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT.
-- `-p` / `--resolution`: Desired vDOS frequency resolution in cm^-1.
+- `-r` / `--resolution`: Desired vDOS frequency resolution in cm^-1.
+
+### 6. Infrared Absorption Intensity / Optical Conductivity (`ftir`)
+Combines the per-atom charge and velocity data of a simulation to generate the vibrational frequency analysis.
+
+**Example:**
+```bash
+trajan glass.lammpstrj ftir 0.05 -m 100 -t 0.05
+```
+
+**Options:**
+- `timestep`: Difference in simulation time between recorded timesteps.
+- `-m` / `--max_timelag`: Maximum charge flux autocorrelation function time difference in simulation units.
+- `-u` / `--units`: LAMMPS unit set for conversion.
+- `-l` / `--lag-step`: Total charge flux autocorrelation function resolution in simulation time units.
+- `-t` / `--taper`: Fraction of total charge flux autocorrelation function to be tapered down to 0 for a clean FFT.
+- `-r` / `--resolution`: Desired vDOS frequency resolution in cm^-1.
+- `-q` / `--quantum-coorection`: Quantum-mechanical correction for high frequency mode emission.
 
 
 ## 📚 Documentation
@@ -181,6 +200,7 @@ The project follows a modular "Handler" architecture:
     - `rdfs.py`: Pairwise distances and Fourier transform logic.
     - `rings.py`: Graph-based ring searching using BFS and shortest path algorithms.
     - `vdos.py`: Velocity autocorrelation function calculator + FFT
+    - `ftir.py`: Total charge flux autocorrelation function calculator + FFT
 
 ## 🥪 Development
 

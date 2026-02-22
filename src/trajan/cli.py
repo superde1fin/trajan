@@ -65,6 +65,7 @@ def parse_args():
     pair_distribution.add_argument("-cn", "--coordination-number", action = "store_true", default = False, help = f"Command line switch to invoke the coordination number calculation for each of the analyzed atomic pairs. Default: False")
     pair_distribution.add_argument("-t", "--total", nargs = "+", default = [], help = "Calculate the total correlation function based on the atom type mappings or custom neutron scattering lengths.\n This flag should be followd by a space separated list of atomic names or scattering lengths for each type in ascending order. Note: This value is calculated per atom while some experimental papers normalize the result per formula unit of the material. This will require scaling the output.")
     pair_distribution.add_argument("-br", "--broaden", type = float, help = "When this flag is the idealized total correlation function is broadened to match experimental results. The value of the maximum momentum transfer Q_max should be provided in inverse angstroms for broadening.", default = False)
+    pair_distribution.add_argument("-s", "--scatter", type = float, help = "Command line switch to invoke scattering factors' calculation. This flag can be supplied with maximum of two values: dq (momentum resolution) and Qmax (maximum momentum transfer)", default = None, nargs = "*")
     pair_distribution.set_defaults(handler_class = RDFS)
 
     ring_size = subparsers.add_parser("rings", help = "Argument parser for ring size distribution calculation from LAMMPS-generated trajectory files.", epilog = "Verbosity Controls:\n   1 : File scan and analysis messages\n       Average ring size\n   2 : Frame scan and analysis messages\n   3 : In-frame ring analysis percentage", formatter_class = utils.NoMetavarHelpFormatter)
@@ -83,7 +84,7 @@ def parse_args():
     vdos.add_argument("-u", "--units", type = str, help = f"LAMMPS unit set for conversion. Default: {constants.DEFAULT_UNITS}.", default = constants.DEFAULT_UNITS)
     vdos.add_argument("-l", "--lag-step", type = float, help = f"Velocity autocorrelation function resolution in simulation time units. Default: timestep", default = None)
     vdos.add_argument("-t", "--taper", type = int, help = f"Fraction of velocity autocorrelation function to be tapered down to 0 for a clean FFT. Default: {constants.DEFAULT_VDOS_TAPER}", default = constants.DEFAULT_VDOS_TAPER)
-    vdos.add_argument("-r", "--resolution", type = int, help = f"Desired vDOS frequency resolution in cm^-1. Note: Default: None.", default = None)
+    vdos.add_argument("-r", "--resolution", type = int, help = f"Desired vDOS frequency resolution in cm^-1. Default: None.", default = None)
 
     vdos.set_defaults(handler_class = VDOS)
 

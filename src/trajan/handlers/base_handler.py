@@ -52,6 +52,8 @@ class BASE():
             self.__size = 1
             self.__comm = None
 
+        self.__input_file_type = None
+
     def get_frame_step(self):
         return self.__frame_step
 
@@ -77,6 +79,9 @@ class BASE():
         return self.__lengths
 
     def get_box_periods(self):
+        if self.__input_file_type not in ["TRAJECTORY"]:
+            self.verbose_print(f"ERROR: Input file type \"{self.__input_file_type}\" does not contain periodicity information.")
+            sys.exit(1)
         return self.__box_periods
 
     def get_natoms(self):
@@ -134,7 +139,7 @@ class BASE():
         read_timestep = False
         read_natoms = False
         read_box = False
-        read_atoms = False
+        read_atoms = 0
 
         box_lines = list()
         atom_lines = list()
@@ -152,72 +157,162 @@ class BASE():
 
         with open(self.__trajectory, "r") as f:
             for line in self._get_line_iterator(f):
-                if "ITEM: TIMESTEP" in line:
-                    if read_atoms and len(atom_lines) > 0:
-                        self._postprocess(atom_lines)
-                        yield self.__frame - 1
+                #If undetermined check which file is being read
+                if self.__input_file_type is None:
+                    if "ITEM: TIMESTEP" in line:
+                        self.__input_file_type = "TRAJECTORY"
+                    else:
+                        splt = line.strip().split()
+                        if len(splt) == 2 and splt[0].isnumeric() and splt[1] == "atoms":
+                            self.__input_file_type = "DATA"
 
-                        if self.__frame >= stop:
-                            self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
-                            return
 
-                    read_timestep = True
-                    read_atoms = False
-                    atom_lines = list()
-                    box_lines = list()
+                if self.__input_file_type == "TRAJECTORY":
+                    if "ITEM: TIMESTEP" in line:
+                        if read_atoms and len(atom_lines) > 0:
+                            self._postprocess(atom_lines)
+                            yield self.__frame - 1
 
-                    record_this_step = (self.__frame >= start) and (self.__frame < stop) and ((self.__frame - start) % step == 0)
-                    if not record_this_step:
+                            if self.__frame >= stop:
+                                self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
+                                return
+
+                        read_timestep = True
+                        read_atoms = False
+                        atom_lines = list()
+                        box_lines = list()
+
+                        record_this_step = (self.__frame >= start) and (self.__frame < stop) and ((self.__frame - start) % step == 0)
+                        if not record_this_step:
+                            read_timestep = False
+                        else:
+                            self.__user_frame += 1
+
+                        self.__frame += 1
+
+
+                    elif read_timestep:
+                        self.__timestep = int(line.strip())
+                        self.verbose_print(f"{self.__frame - 1} scan of TS {self.__timestep}", verbosity = 2)
                         read_timestep = False
-                    else:
-                        self.__user_frame += 1
 
-                    self.__frame += 1
+                    elif "ITEM: NUMBER OF ATOMS" in line and record_this_step:
+                        read_natoms = True
+                        self.__filtered_atoms_num = 0
+                    elif read_natoms:
+                        natoms = int(line.strip())
+                        self.__natoms = natoms
+                        read_natoms = False
 
+                    elif "ITEM: BOX BOUNDS" in line and record_this_step:
+                        read_box = True
+                        self.__box_periods = line.split()[-3:]
+                        box_lines = list()
+                    elif read_box:
+                        box_lines.append(line)
+                        if len(box_lines) == 3:
+                            self.__box = np.array([np.fromstring(l, sep=" ", count=2) for l in box_lines])
+                            read_box = False
 
-                elif read_timestep:
-                    self.__timestep = int(line.strip())
-                    self.verbose_print(f"{self.__frame - 1} scan of TS {self.__timestep}", verbosity = 2)
-                    read_timestep = False
+                    elif "ITEM: ATOMS" in line and record_this_step:
+                        read_atoms = True
+                        count_per_type = False
+                        if not self.__columns:
+                            for i, h in enumerate(line.split()[2:]):
+                                self.__columns[h] = i
+                        if "type" in self.__columns:
+                            count_per_type = True
+                            self.__num_each_type = dict()
+                    elif read_atoms:
+                        split_line = np.fromstring(line, sep = " ")
+                        if "type" in self.__columns and int(split_line[self.__columns["type"]]) not in self.__type_blacklist:
+                            atom_lines.append(split_line)
+                            if count_per_type:
+                                cur_type = int(split_line[self.__columns["type"]])
+                                if not cur_type in self.__num_each_type:
+                                    self.__num_each_type[cur_type] = 1
+                                else:
+                                    self.__num_each_type[cur_type] += 1
+                        else:
+                            self.__filtered_atoms_num += 1
+                else:
+                    splt = line.strip().split()
+                    if not read_atoms:
+                        if len(splt) == 2 and splt[0].isnumeric() and splt[1] == "atoms":
+                            if read_atoms and len(atom_lines) > 0:
+                                self._postprocess(atom_lines)
+                                yield self.__frame - 1
 
-                elif "ITEM: NUMBER OF ATOMS" in line and record_this_step:
-                    read_natoms = True
-                    self.__filtered_atoms_num = 0
-                elif read_natoms:
-                    natoms = int(line.strip())
-                    self.__natoms = natoms
-                    read_natoms = False
+                                if self.__frame >= stop:
+                                    self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
+                                    return
 
-                elif "ITEM: BOX BOUNDS" in line and record_this_step:
-                    read_box = True
-                    self.__box_periods = line.split()[-3:]
-                elif read_box:
-                    box_lines.append(line)
-                    if len(box_lines) == 3:
-                        self.__box = np.array([np.fromstring(l, sep=" ", count=2) for l in box_lines])
-                        read_box = False
+                            read_atoms = 0
+                            self.__frame += 1
+                            self.__natoms = int(splt[0])
+                            self.__filtered_atoms_num = 0
+                            box_lines = list()
 
-                elif "ITEM: ATOMS" in line and record_this_step:
-                    read_atoms = True
-                    count_per_type = False
-                    if not self.__columns:
-                        for i, h in enumerate(line.split()[2:]):
-                            self.__columns[h] = i
-                    if "type" in self.__columns:
-                        count_per_type = True
-                        self.__num_each_type = dict()
-                elif read_atoms:
-                    split_line = np.fromstring(line, sep = " ")
-                    if "type" in self.__columns and int(split_line[self.__columns["type"]]) not in self.__type_blacklist:
-                        atom_lines.append(split_line)
-                        if count_per_type:
-                            cur_type = int(split_line[self.__columns["type"]])
-                            if not cur_type in self.__num_each_type:
-                                self.__num_each_type[cur_type] = 1
+                            record_this_step = (self.__frame >= start) and (self.__frame < stop) and ((self.__frame - start) % step == 0)
+                            if not record_this_step:
+                                read_timestep = False
                             else:
-                                self.__num_each_type[cur_type] += 1
+                                self.__user_frame += 1
+
+                            self.__frame += 1
+                            self.__timestep = self.__frame
+
+                        elif len(splt) == 4:
+                            try:
+                                lo = float(splt[0])
+                                hi = float(splt[1])
+                                box_lines.append([lo, hi])
+                            except:
+                                pass
+
+                        if box_lines and not line.strip():
+                            self.__box = np.array(box_lines)
+
+                        if len(splt) == 3 and splt[0] == "Atoms" and splt[1] == "#":
+                            data_type = splt[2]
+                            read_atoms += 1
+                            count_per_type = False
+                            atom_lines = list()
+                            if not self.__columns:
+                                for i, h in enumerate(constants.DATAFILE_COLUMNS[data_type]):
+                                    self.__columns[h] = i
+                            if "type" in self.__columns:
+                                count_per_type = True
+                                self.__num_each_type = dict()
+
+                    elif read_atoms == 1:
+                        read_atoms += 1
                     else:
-                        self.__filtered_atoms_num += 1
+                        cols_not_listed = list()
+
+                        split_line = np.fromstring(line, sep = " ")
+                        atom_lines.append(split_line)
+
+                        #Filter out non required arguments that are not listed in the data file
+                        for col, ind in self.__columns.items():
+                            if ind >= split_line.size:
+                                cols_not_listed.append(col)
+                        for col in cols_not_listed:
+                            del self.__columns[col]
+
+                        if "type" in self.__columns and int(split_line[self.__columns["type"]]) not in self.__type_blacklist:
+                            atom_lines.append(split_line)
+                            if count_per_type:
+                                cur_type = int(split_line[self.__columns["type"]])
+                                if not cur_type in self.__num_each_type:
+                                    self.__num_each_type[cur_type] = 1
+                                else:
+                                    self.__num_each_type[cur_type] += 1
+                        else:
+                            self.__filtered_atoms_num += 1
+
+
+
 
 
         if len(atom_lines) > 0:
@@ -241,7 +336,6 @@ class BASE():
 
 
         if "type" in self.__columns.keys():
-            #self.__types = np.sort(np.unique(self.__atomic_data[:, self.__columns["type"]]).astype(int))
             self.__types = np.sort(np.array(list(self.__num_each_type.keys())))
             tmp = self.__num_each_type
             self.__num_each_type = np.zeros(shape = (np.max(self.__types) + 1))

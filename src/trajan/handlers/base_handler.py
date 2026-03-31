@@ -233,6 +233,8 @@ class BASE():
                                     self.__num_each_type[cur_type] = 1
                                 else:
                                     self.__num_each_type[cur_type] += 1
+                        elif "type" not in self.__columns:
+                            atom_lines.append(split_line)
                         else:
                             self.__filtered_atoms_num += 1
                 else:
@@ -288,28 +290,31 @@ class BASE():
                     elif read_atoms == 1:
                         read_atoms += 1
                     else:
-                        cols_not_listed = list()
-
-                        split_line = np.fromstring(line, sep = " ")
-                        atom_lines.append(split_line)
-
-                        #Filter out non required arguments that are not listed in the data file
-                        for col, ind in self.__columns.items():
-                            if ind >= split_line.size:
-                                cols_not_listed.append(col)
-                        for col in cols_not_listed:
-                            del self.__columns[col]
-
-                        if "type" in self.__columns and int(split_line[self.__columns["type"]]) not in self.__type_blacklist:
-                            atom_lines.append(split_line)
-                            if count_per_type:
-                                cur_type = int(split_line[self.__columns["type"]])
-                                if not cur_type in self.__num_each_type:
-                                    self.__num_each_type[cur_type] = 1
-                                else:
-                                    self.__num_each_type[cur_type] += 1
+                        if not line.strip():
+                            read_atoms = 0
                         else:
-                            self.__filtered_atoms_num += 1
+                            cols_not_listed = list()
+
+                            split_line = np.fromstring(line, sep = " ")
+                            #filter out non required arguments that are not listed in the data file
+                            for col, ind in self.__columns.items():
+                                if ind >= split_line.size:
+                                    cols_not_listed.append(col)
+                            for col in cols_not_listed:
+                                del self.__columns[col]
+
+                            if "type" in self.__columns and int(split_line[self.__columns["type"]]) not in self.__type_blacklist:
+                                atom_lines.append(split_line)
+                                if count_per_type:
+                                    cur_type = int(split_line[self.__columns["type"]])
+                                    if not cur_type in self.__num_each_type:
+                                        self.__num_each_type[cur_type] = 1
+                                    else:
+                                        self.__num_each_type[cur_type] += 1
+                            elif "type" not in self.__columns:
+                                atom_lines.append(split_line)
+                            else:
+                                self.__filtered_atoms_num += 1
 
 
 

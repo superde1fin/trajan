@@ -26,21 +26,37 @@ class RDFS(BASE):
 
         self.calc_coord = args.coordination_number
 
-        if not args.scatter is None:
-            if not args.total:
-                self.verbose_print("WARNING: Scattering factors' calculation was requested without the scattering lengths provided. Please invoke the -t / --total option. No scattering will be calculated.")
-                self.calc_scatter = False
-            else:
-                self.calc_scatter = True
-        else:
-            self.calc_scatter = False
+        scatter_params = args.scatter_partial or args.scatter or []
+        self.calc_scatter_partial = not args.scatter_partial is None
+        self.calc_scatter = (not (args.scatter is None)) and (not self.calc_scatter_partial)
 
-        if args.total:
-            self.calc_total = True
-            self.mappings = np.array(args.total)
+        if self.calc_scatter_partial:
+            scatter_arg = "-sp / --scatter-partial"
+        elif self.calc_scatter:
+            scatter_arg = "-s / --scatter"
+        else:
+            scatter_arg = "-s / --scatter or -sp / --scatter-partial"
+
+        mappings = args.total_partial or args.total or []
+        self.calc_total_partial = bool(args.total_partial)
+        self.calc_total = bool(args.total) and not self.calc_total_partial
+
+        if self.calc_total_partial:
+            total_arg = "-tp / --total-partial"
+        elif self.calc_total:
+            total_arg = "-t / --total"
+        else:
+            total_arg = "-t / --total or -tp / --total-partial"
+
+
+        if scatter_params and not mappings:
+            self.verbose_print(f"WARNING: Scattering factors' calculation was requested without the scattering lengths provided. Please invoke the {total_arg} option. No scattering will be calculated.")
+
+        if mappings:
+            self.mappings = np.array(mappings)
             present_types = self.get_types()
             if self.mappings.size != present_types.size:
-                self.verbose_print(f"ERROR: Number of provided mappings ({self.mappings.size}) is not equal to the number of present types ({present_types.size}).")
+                self.verbose_print(f"ERROR: Number of provided mappings for {total_arg} ({self.mappings.size}) is not equal to the number of present types ({present_types.size}).")
                 sys.exit(1)
             else:
                 self.scat_lengths = np.zeros(shape = (np.max(present_types) + 1, ))
@@ -60,8 +76,6 @@ class RDFS(BASE):
                                     input_accepted = True
                                 except:
                                     pass
-        else:
-            self.calc_total = False
 
         if args.pair and not self.calc_total:
             self.pairs = np.array(args.pair)
@@ -76,26 +90,26 @@ class RDFS(BASE):
         self.broaden = False
         self.Qmax = None
         if args.broaden:
-            if not self.calc_total:
+            if not (self.calc_total or self.calc_total_partial):
                 self.verbose_print("WARNING: Broadening of the total correlation function requested, without the request for T(r) itself. This will be ignored.\n")
             else:
                 self.broaden = True
                 self.Qmax = args.broaden
 
-        if self.calc_scatter:
-            if len(args.scatter) > 2:
-                self.verbose_print("WARNING: Too many arguments supplied to -s / --scatter. Only first two will be interpreted as momentum resolution and maximum momentum.")
-            args.scatter = args.scatter[:2]
-            if len(args.scatter) == 2:
-                self.dq, self.sQmax = args.scatter
+        if self.calc_scatter_partial or self.calc_scatter:
+            if len(scatter_params) > 2:
+                self.verbose_print(f"WARNING: Too many arguments supplied to {scatter_arg}. Only first two will be interpreted as momentum resolution and maximum momentum.")
+                scatter_params = scatter_params[:2]
+            if len(scatter_params) == 2:
+                self.dq, self.sQmax = scatter_params
             else:
                 if self.Qmax is None:
-                    self.verbose_print("ERROR: No maximum momentum transfer value Q_max was defined. Either provide it by invoking -br / --broaden or as a second argument of -s / -scatter")
+                    self.verbose_print(f"ERROR: No maximum momentum transfer value Q_max was defined. Either provide it by invoking -br / --broaden or as a second argument of {scatter_arg}")
                     sys.exit(1)
                 else:
                     self.sQmax = self.Qmax
 
-                if len(args.scatter) == 1:
+                if len(scatter_params) == 1:
                     self.dq = args.scatter[0]
                 else:
                     self.dq = np.pi / self.cutoff
@@ -194,38 +208,54 @@ class RDFS(BASE):
             self.verbose_print(f"{frame_idx} analysis of TS {self.get_timestep()}", verbosity = 2)
 
         self.g_r += self.hist_counts / (shell_volumes[np.newaxis, :] * n1_rho2[:, np.newaxis])
+        nframes = self.get_user_frame()
         if self.calc_coord:
-            self.coordination = np.cumsum(self.hist_counts, axis = 1) / self.total_n1[:, np.newaxis]
+            self.coordination = np.cumsum(self.hist_counts, axis = 1) / (self.total_n1[:, np.newaxis] * nframes)
 
-        if self.calc_total:
-            nframes = self.get_user_frame()
+        if self.calc_total or self.calc_total_partial:
             type_fractions /= nframes
             number_density /= nframes
             average_scat = np.sum(type_fractions * self.scat_lengths)
-            g_weighted_sum = np.zeros_like(self.edges)
+            self.T_partials = np.zeros_like(self.g_r)
+            T0_partials = np.zeros_like(self.g_r)
+            pair_weights = np.zeros(shape = (self.pairs.shape[0], ))
+
+            global_factor = 4 * np.pi * self.edges * number_density * 0.01
 
             for pid, pair in enumerate(self.pairs):
-                weight = np.prod(type_fractions[pair]) * np.prod(self.scat_lengths[pair])
+                pair_weights[pid] = np.prod(type_fractions[pair]) * np.prod(self.scat_lengths[pair])
                 if pair[0] != pair[1]:
-                    weight *= 2
-                g_weighted_sum += weight * self.g_r[pid]
+                    pair_weights[pid] *= 2
+                self.T_partials[pid] = global_factor * pair_weights[pid] * self.g_r[pid]
+                T0_partials[pid] = global_factor * pair_weights[pid]
 
-            self.T_r = 4 * np.pi * self.edges * number_density * g_weighted_sum * 0.01
+            self.T_r = np.sum(self.T_partials, axis = 0)
 
-            T_0 = 4 * np.pi * number_density * self.edges * 0.01 * (average_scat**2)
-            oscillations = self.T_r - T_0
+            T_0 = global_factor * (average_scat**2)
+            self.oscillations = self.T_r - T_0
+            self.oscillations_partial = self.T_partials - T0_partials
 
-            if self.calc_scatter:
+            if self.calc_scatter or self.calc_scatter_partial:
                 self.q_grid = np.arange(2 * np.pi / self.cutoff, self.sQmax + self.dq, self.dq)
 
                 Q_2d = self.q_grid[:, np.newaxis]
                 r_2d = self.edges[np.newaxis, :]
 
-                integrand = oscillations[np.newaxis, :] * np.sin(Q_2d * r_2d)
+                integrand = self.oscillations[np.newaxis, :] * np.sin(Q_2d * r_2d)
                 integral = scipy.integrate.simpson(integrand, x=self.edges, axis=-1)
 
                 self.i_Q = integral / self.q_grid
                 self.S_Q = 1.0 + (self.i_Q / (0.01 * (average_scat**2)))
+
+                if self.calc_scatter_partial:
+                    self.i_Q_partials = np.zeros((self.pairs.shape[0], self.q_grid.size))
+                    self.S_Q_partials = np.zeros_like(self.i_Q_partials)
+
+                    for pid in range(self.pairs.shape[0]):
+                        integrand_p = self.oscillations_partial[pid][np.newaxis, :] * np.sin(Q_2d * r_2d)
+                        integral_p = scipy.integrate.simpson(integrand_p, x = self.edges, axis=-1)
+                        self.i_Q_partials[pid] = integral_p / self.q_grid
+                        self.S_Q_partials[pid] = 1.0 + (self.i_Q_partials[pid] / (0.01 * pair_weights[pid]))
 
             #Lorch Broadening
             if self.broaden:
@@ -243,9 +273,12 @@ class RDFS(BASE):
 
                     kernel[i] = (1 / np.pi) * sp.integrate.simpson(integrand, x=q_grid)
 
-                broadened = sp.signal.convolve(oscillations, kernel, mode='same') * dr
+                self.broad_T_osc = sp.signal.convolve(self.oscillations, kernel, mode='same') * dr
+                self.broad_T_r = T_0 + self.broad_T_osc
 
-                self.broad_T_r = T_0 + broadened
+                if self.calc_total_partial:
+                    self.broad_T_partials = np.zeros_like(self.T_partials)
+                    self.broad_T_partials = sp.signal.convolve(self.oscillations_partial, kernel[np.newaxis, :], mode='same') * dr
 
 
         self.verbose_print("Analysis complete")
@@ -255,10 +288,17 @@ class RDFS(BASE):
         header = "r," + ",".join([f"{pair[0]}-{pair[1]}" for pair in self.pairs])
         if self.calc_total:
             data = np.column_stack((data, self.T_r))
-            header += ", T(r)"
+            header += ",T(r)"
+        if self.calc_total_partial:
+            data = np.column_stack((data, self.T_r, self.oscillations, self.oscillations_partial.T))
+            header += ",T(r),T(r) - T0," + ",".join([f"{pair[0]}-{pair[1]} (T(r))" for pair in self.pairs])
         if self.broaden:
             data = np.column_stack((data, self.broad_T_r))
-            header += ", broad T(r)"
+            header += ",broad T(r)"
+            if self.calc_total_partial:
+                data = np.column_stack((data, self.broad_T_osc, self.broad_T_partials.T))
+                header += ",broad T(r) - T0," + ",".join([f"{pair[0]}-{pair[1]} (broad T(r))" for pair in self.pairs])
+
         if self.calc_coord:
             data = np.column_stack((data, self.coordination.T))
             header += ", " + "(CN),".join([f"{pair[0]}-{pair[1]}" for pair in self.pairs]) + "(CN)"
@@ -270,6 +310,14 @@ class RDFS(BASE):
         if self.calc_scatter:
             data = np.column_stack((self.q_grid, self.i_Q, self.S_Q))
             header = "Q, i_Q, S_Q"
+            super().write(data = data,
+                          header = header,
+                          outfile = "scatter_" + self.outfile,
+                          )
+        if self.calc_scatter_partial:
+            data = np.column_stack((self.q_grid, self.i_Q, self.i_Q_partials.T, self.S_Q, self.S_Q_partials.T))
+            header = "Q, i_Q," + ",".join([f"{pair[0]}-{pair[1]} (i_Q)" for pair in self.pairs])
+            header += ",S_Q," +  ",".join([f"{pair[0]}-{pair[1]} (S_Q)" for pair in self.pairs])
             super().write(data = data,
                           header = header,
                           outfile = "scatter_" + self.outfile,

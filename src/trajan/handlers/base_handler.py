@@ -173,9 +173,9 @@ class BASE():
                             self._postprocess(atom_lines)
                             yield self.__frame - 1
 
-                            if self.__frame >= stop:
-                                self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
-                                return
+                        if self.__frame >= stop:
+                            self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
+                            return
 
                         read_timestep = True
                         read_atoms = False
@@ -246,9 +246,9 @@ class BASE():
                                 self._postprocess(atom_lines)
                                 yield self.__frame - 1
 
-                                if self.__frame >= stop:
-                                    self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
-                                    return
+                            if self.__frame >= stop:
+                                self.verbose_print(f"\nTrajectory file ({self.__trajectory}) scan complete.\n")
+                                return
 
                             read_atoms = 0
                             self.__natoms = int(splt[0])
